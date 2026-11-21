@@ -29,6 +29,26 @@ cd fnos_tv_danmu
 
 > 注意：本地构建需要安装 [Android Studio](https://developer.android.com/studio) 并配置好 Android SDK（API 33）。如果使用 Windows 系统，构建时部分依赖可能需要科学上网。
 
+### Release 签名与覆盖安装
+
+Release APK 使用项目专用密钥 `app/release.jks` 签名；密钥文件和密码均不入库（`.gitignore` 已排除 `*.jks` 和 `local.properties`）。
+
+新机器构建 Release 前需要：
+
+1. 把 `app/release.jks` 放到相同路径（**务必备份**，丢失后无法覆盖已安装版本）
+2. 在根目录 `local.properties` 中添加：
+
+```properties
+release.keystore.file=app/release.jks
+release.keystore.password=<密钥库密码>
+release.key.alias=fntv-release
+release.key.password=<密钥密码>
+```
+
+未配置这些属性时，Release 会退回到 Android 默认 debug 签名，仅用于本地验证。
+
+同一签名下的新版本可以直接 `adb install -r` 覆盖旧版；每次发布需递增 `versionCode`。如果之前安装的是其他签名的版本，必须先卸载一次。
+
 ---
 
 ## 📦 功能特点
