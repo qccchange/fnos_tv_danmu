@@ -50,6 +50,7 @@ public class PlayerActivity extends AppCompatActivity {
     private DanmuManager danmuManager;
     private QualitySelectHelper qualityHelper;
     private SubtitleMergeOverlay subtitleMerge;
+    private SubtitleStyleManager subtitleStyleManager;
 
     private Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable infoRefreshR = new Runnable() {
@@ -181,6 +182,8 @@ public class PlayerActivity extends AppCompatActivity {
             playerView.getSubtitleView().setVisibility(View.GONE);
             subtitleMerge.setSubtitleView(playerView.getSubtitleView());
         }
+        subtitleStyleManager = new SubtitleStyleManager(this);
+        subtitleStyleManager.attach(subtitleMerge, playerView.getSubtitleView());
 
         findViewById(android.R.id.content).setOnTouchListener(new View.OnTouchListener() {
             private boolean longPressing = false;
@@ -440,6 +443,13 @@ public class PlayerActivity extends AppCompatActivity {
         }
         if (btnSubtitleTrack != null) {
             btnSubtitleTrack.setOnClickListener(v -> cloudStreamManager.showSubtitleTrackDialog(PlayerActivity.this));
+        }
+        View btnSubtitleStyle = findViewById(R.id.btnSubtitleStyle);
+        if (btnSubtitleStyle != null) {
+            btnSubtitleStyle.setOnClickListener(v -> {
+                showCtrl(true);
+                if (subtitleStyleManager != null) subtitleStyleManager.showSettings();
+            });
         }
         if (btnHdrToggle != null) {
             btnHdrToggle.setOnClickListener(v -> toggleHdr());
@@ -823,6 +833,9 @@ public class PlayerActivity extends AppCompatActivity {
         playerView.setPlayer(player);
         playerView.setUseController(false);
         playerView.setKeepScreenOn(true);
+        if (subtitleStyleManager != null) {
+            subtitleStyleManager.attach(subtitleMerge, playerView.getSubtitleView());
+        }
         // 重新挂载事件监听（错误处理等）
         player.addListener(new Player.Listener() {
             @Override public void onPlaybackStateChanged(int s) {
@@ -914,16 +927,9 @@ public class PlayerActivity extends AppCompatActivity {
         btnRatio.setText(RATIO_LABELS[ratioIdx]);
         if (playerView != null) {
             playerView.setResizeMode(RATIO_MODES[ratioIdx]);
-            // 拉伸/缩放时把字幕上移，避免被裁切
-            if (playerView.getSubtitleView() != null) {
-                ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) playerView.getSubtitleView().getLayoutParams();
-                if (lp != null) {
-                    int bottom = RATIO_MODES[ratioIdx] == 0 ? 0 : (int)(55 * getResources().getDisplayMetrics().density);
-                    if (lp.bottomMargin != bottom) {
-                        lp.bottomMargin = bottom;
-                        playerView.getSubtitleView().setLayoutParams(lp);
-                    }
-                }
+            // 拉伸/缩放时把字幕上移，避免被裁切（文字与图片字幕统一由样式管理器处理）
+            if (subtitleStyleManager != null) {
+                subtitleStyleManager.setRatioLift(RATIO_MODES[ratioIdx] == 0 ? 0 : 55);
             }
         }
     }
@@ -1158,33 +1164,39 @@ public class PlayerActivity extends AppCompatActivity {
             // 信息面板内焦点全方向循环（防止方向键逃出面板）
             View btnAudioTrack = findViewById(R.id.btnAudioTrack);
             View btnSubtitleTrack = findViewById(R.id.btnSubtitleTrack);
+            View btnSubtitleStyle = findViewById(R.id.btnSubtitleStyle);
             View btnHdr = findViewById(R.id.btnHdrToggle);
+            int closeId = btnCloseInfo.getId();
+            int audioId = btnAudioTrack != null ? btnAudioTrack.getId() : closeId;
+            int subId = btnSubtitleTrack != null ? btnSubtitleTrack.getId() : audioId;
+            int styleId = btnSubtitleStyle != null ? btnSubtitleStyle.getId() : subId;
+            int hdrId = btnHdr != null ? btnHdr.getId() : styleId;
+
             if (btnAudioTrack != null) {
-                btnAudioTrack.setNextFocusUpId(btnCloseInfo.getId());
-                btnAudioTrack.setNextFocusLeftId(btnCloseInfo.getId());
-                btnAudioTrack.setNextFocusRightId(btnSubtitleTrack != null ? btnSubtitleTrack.getId() : (btnHdr != null ? btnHdr.getId() : btnCloseInfo.getId()));
+                btnAudioTrack.setNextFocusUpId(closeId);
+                btnAudioTrack.setNextFocusLeftId(closeId);
+                btnAudioTrack.setNextFocusRightId(subId);
             }
             if (btnSubtitleTrack != null) {
-                btnSubtitleTrack.setNextFocusUpId(btnCloseInfo.getId());
-                btnSubtitleTrack.setNextFocusLeftId(btnAudioTrack != null ? btnAudioTrack.getId() : btnCloseInfo.getId());
-                btnSubtitleTrack.setNextFocusRightId(btnHdr != null ? btnHdr.getId() : btnCloseInfo.getId());
+                btnSubtitleTrack.setNextFocusUpId(closeId);
+                btnSubtitleTrack.setNextFocusLeftId(audioId);
+                btnSubtitleTrack.setNextFocusRightId(styleId);
+            }
+            if (btnSubtitleStyle != null) {
+                btnSubtitleStyle.setNextFocusUpId(closeId);
+                btnSubtitleStyle.setNextFocusDownId(closeId);
+                btnSubtitleStyle.setNextFocusLeftId(subId);
+                btnSubtitleStyle.setNextFocusRightId(hdrId);
             }
             if (btnHdr != null) {
-                btnHdr.setNextFocusUpId(btnCloseInfo.getId());
-                btnHdr.setNextFocusLeftId(btnSubtitleTrack != null ? btnSubtitleTrack.getId() : (btnAudioTrack != null ? btnAudioTrack.getId() : btnCloseInfo.getId()));
-                btnHdr.setNextFocusRightId(btnCloseInfo.getId());
-                btnHdr.setNextFocusDownId(btnCloseInfo.getId());
+                btnHdr.setNextFocusUpId(closeId);
+                btnHdr.setNextFocusLeftId(styleId);
+                btnHdr.setNextFocusRightId(closeId);
+                btnHdr.setNextFocusDownId(closeId);
             }
-            int closeDown = btnAudioTrack != null ? btnAudioTrack.getId()
-                    : (btnSubtitleTrack != null ? btnSubtitleTrack.getId()
-                    : (btnHdr != null ? btnHdr.getId() : btnCloseInfo.getId()));
-            btnCloseInfo.setNextFocusDownId(closeDown);
-            btnCloseInfo.setNextFocusLeftId(btnHdr != null ? btnHdr.getId()
-                    : (btnSubtitleTrack != null ? btnSubtitleTrack.getId()
-                    : (btnAudioTrack != null ? btnAudioTrack.getId() : btnCloseInfo.getId())));
-            btnCloseInfo.setNextFocusRightId(btnAudioTrack != null ? btnAudioTrack.getId()
-                    : (btnSubtitleTrack != null ? btnSubtitleTrack.getId()
-                    : (btnHdr != null ? btnHdr.getId() : btnCloseInfo.getId())));
+            btnCloseInfo.setNextFocusDownId(audioId);
+            btnCloseInfo.setNextFocusLeftId(hdrId);
+            btnCloseInfo.setNextFocusRightId(audioId);
             updateInfo();
             handler.removeCallbacks(infoRefreshR);
             handler.postDelayed(infoRefreshR, 1000);
@@ -1270,8 +1282,10 @@ public class PlayerActivity extends AppCompatActivity {
         if (btnSkip != null) btnSkip.setOnFocusChangeListener(l);
         View btnAudioTrack = findViewById(R.id.btnAudioTrack);
         View btnSubtitleTrack = findViewById(R.id.btnSubtitleTrack);
+        View btnSubtitleStyle = findViewById(R.id.btnSubtitleStyle);
         if (btnAudioTrack != null) btnAudioTrack.setOnFocusChangeListener(l);
         if (btnSubtitleTrack != null) btnSubtitleTrack.setOnFocusChangeListener(l);
+        if (btnSubtitleStyle != null) btnSubtitleStyle.setOnFocusChangeListener(l);
         if (btnHdrToggle != null) btnHdrToggle.setOnFocusChangeListener(l);
         btnCloseInfo.setOnFocusChangeListener(l);
         infoPanel.setOnFocusChangeListener(l);

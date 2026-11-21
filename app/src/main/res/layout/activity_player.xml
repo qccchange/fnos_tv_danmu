@@ -445,6 +445,17 @@
                 android:layout_marginRight="6dp"
                 android:nextFocusDown="@+id/btnHdrToggle" />
 
+            <Button android:id="@+id/btnSubtitleStyle"
+                android:layout_width="wrap_content" android:layout_height="34dp"
+                android:background="@drawable/bg_chip"
+                android:text="字幕样式"
+                android:textColor="#EEE" android:textSize="12sp"
+                android:focusable="true"
+                android:gravity="center"
+                android:paddingLeft="10dp" android:paddingRight="10dp"
+                android:minWidth="0dp" android:minHeight="0dp"
+                android:layout_marginRight="6dp" />
+
             <Button android:id="@+id/btnHdrToggle"
                 android:layout_width="wrap_content" android:layout_height="34dp"
                 android:background="@drawable/bg_chip"
