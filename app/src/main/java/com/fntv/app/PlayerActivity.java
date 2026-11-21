@@ -51,6 +51,7 @@ public class PlayerActivity extends AppCompatActivity {
     private QualitySelectHelper qualityHelper;
     private SubtitleMergeOverlay subtitleMerge;
     private SubtitleStyleManager subtitleStyleManager;
+    private DefaultTrackSelector trackSelector;
 
     private Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable infoRefreshR = new Runnable() {
@@ -513,6 +514,26 @@ public class PlayerActivity extends AppCompatActivity {
         playerView.requestFocus();
     }
 
+    /**
+     * 字幕轨默认策略：自动优先中文；用户手动关闭/选轨后记住选择，重建播放器也不覆盖。
+     */
+    private DefaultTrackSelector createTrackSelector() {
+        DefaultTrackSelector selector = new DefaultTrackSelector(this);
+        String mode = getSharedPreferences("fntv_prefs", MODE_PRIVATE)
+                .getString("subtitle_track_mode", "auto");
+        DefaultTrackSelector.Parameters.Builder b = selector.buildUponParameters();
+        if ("off".equals(mode)) {
+            b.setRendererDisabled(C.TRACK_TYPE_TEXT, true);
+        } else if ("auto".equals(mode)) {
+            b.setPreferredTextLanguages("zh", "chi", "zho"); // 不链式赋值：返回父类 Builder
+        } else if (mode != null && mode.startsWith("lang:")) {
+            b.setPreferredTextLanguage(mode.substring(5));
+        }
+        // manual：保留用户显式选择的轨道，不施加语言偏好
+        selector.setParameters(b.build());
+        return selector;
+    }
+
     private void initPlayer() {
         // 强制最高刷新率（Android 11+）
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -540,8 +561,9 @@ public class PlayerActivity extends AppCompatActivity {
         } else {
             rf.setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON);
         }
+        trackSelector = createTrackSelector();
         player = new SimpleExoPlayer.Builder(this, rf)
-                .setTrackSelector(new DefaultTrackSelector(this))
+                .setTrackSelector(trackSelector)
                 .setLoadControl(createLoadControl())
                 .build();
         playerView.setPlayer(player);
@@ -826,8 +848,9 @@ public class PlayerActivity extends AppCompatActivity {
             }
         };
         rf2.setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER);
+        trackSelector = createTrackSelector();
         player = new SimpleExoPlayer.Builder(this, rf2)
-                .setTrackSelector(new DefaultTrackSelector(this))
+                .setTrackSelector(trackSelector)
                 .setLoadControl(createLoadControl())
                 .build();
         playerView.setPlayer(player);

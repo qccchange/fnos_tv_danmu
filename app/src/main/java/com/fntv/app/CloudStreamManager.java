@@ -586,6 +586,7 @@ public class CloudStreamManager {
                                 .setRendererDisabled(C.TRACK_TYPE_TEXT, true)
                                 .build()
                         );
+                        prefs.edit().putString("subtitle_track_mode", "off").apply();
                     } else if (selGroup >= 0 && selTrack >= 0) {
                         selector.setParameters(
                             selector.buildUponParameters()
@@ -595,13 +596,18 @@ public class CloudStreamManager {
                                     new DefaultTrackSelector.SelectionOverride(selGroup, selTrack))
                                 .build()
                         );
+                        // 记住语言，播放器重建后按同一语言自动选轨
+                        Format selected = groups.get(selGroup).getFormat(selTrack);
+                        String lang = selected.language;
+                        prefs.edit().putString("subtitle_track_mode",
+                                (lang != null && !lang.isEmpty()) ? "lang:" + lang : "manual").apply();
                     } else {
-                        selector.setParameters(
-                            selector.buildUponParameters()
+                        DefaultTrackSelector.Parameters.Builder b = selector.buildUponParameters()
                                 .clearSelectionOverrides(C.TRACK_TYPE_TEXT)
-                                .setRendererDisabled(C.TRACK_TYPE_TEXT, false)
-                                .build()
-                        );
+                                .setRendererDisabled(C.TRACK_TYPE_TEXT, false);
+                        b.setPreferredTextLanguages("zh", "chi", "zho");
+                        selector.setParameters(b.build());
+                        prefs.edit().putString("subtitle_track_mode", "auto").apply();
                     }
                     lastAudioTrackLabel = items[which];
                     lastSubtitleTrackLabel = items[which];
@@ -637,6 +643,7 @@ public class CloudStreamManager {
                                 .setRendererDisabled(C.TRACK_TYPE_TEXT, true)
                                 .build()
                         );
+                        prefs.edit().putString("subtitle_track_mode", "off").apply();
                     } else {
                         int idx = which - 1;
                         if (idx < streamSubtitleTracks.size()) {
@@ -650,6 +657,9 @@ public class CloudStreamManager {
                                         .setPreferredTextLanguage(lang)
                                         .build()
                                 );
+                                prefs.edit().putString("subtitle_track_mode", "lang:" + lang).apply();
+                            } else {
+                                prefs.edit().putString("subtitle_track_mode", "manual").apply();
                             }
                         }
                     }
