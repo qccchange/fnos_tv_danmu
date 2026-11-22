@@ -66,6 +66,9 @@ public class HomeActivity extends AppCompatActivity {
     private long t0;
     private boolean overviewBuilt = false;
     private long backPressedTime = 0;
+    private String lastFocusedTag;
+    private boolean focusRestorePending;
+    private final java.util.Map<String, View> focusViews = new java.util.HashMap<>();
 
     // 横竖屏切换时保存的页面状态
     private String savedBrowseGuid, savedBrowseTitle;
@@ -195,6 +198,19 @@ public class HomeActivity extends AppCompatActivity {
         tabMovies.setOnClickListener(v -> switchTab(0));
         tabLibrary.setOnClickListener(v -> { switchTab(1); loadMediaLibraries(); });
         tabSettings.setOnClickListener(v -> switchTab(2));
+
+        // TV 规范：焦点移到 Tab 即切换页面（点击仍保留）
+        View.OnFocusChangeListener tabFocus = (v, hasFocus) -> {
+            if (!hasFocus) return;
+            int idx = v == tabMovies ? 0 : (v == tabLibrary ? 1 : 2);
+            if (idx != currentTab) {
+                if (idx == 1) loadMediaLibraries();
+                switchTab(idx);
+            }
+        };
+        tabMovies.setOnFocusChangeListener(tabFocus);
+        tabLibrary.setOnFocusChangeListener(tabFocus);
+        tabSettings.setOnFocusChangeListener(tabFocus);
     }
 
 
@@ -277,6 +293,7 @@ public class HomeActivity extends AppCompatActivity {
         moviesContainer.removeAllViews();
         showingOverview = true;
         overviewBuilt = true;
+        focusRestorePending = lastFocusedTag != null;
 
         // 继续观看（最顶部，占位，稍后由 loadContinueWatching 填充）
         LinearLayout continueWatchingBox = new LinearLayout(this);
@@ -356,6 +373,7 @@ public class HomeActivity extends AppCompatActivity {
                 LinearLayout box = (LinearLayout) v;
                 box.removeAllViews();
                 populateGrid(box, items);
+                restoreFocusIfNeeded();
                 break;
             }
         }
@@ -442,7 +460,7 @@ public class HomeActivity extends AppCompatActivity {
 
         HorizontalScrollView hsv = new HorizontalScrollView(this);
         hsv.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, 410));
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(184)));
         hsv.setScrollBarStyle(View.SCROLLBARS_INSIDE_OVERLAY);
 
         LinearLayout row = new LinearLayout(this);
@@ -452,7 +470,7 @@ public class HomeActivity extends AppCompatActivity {
         for (PlayListItem item : items) {
             View card = makeContinueCard(item);
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                    220, 380);
+                    dp(240), ViewGroup.LayoutParams.WRAP_CONTENT);
             lp.setMargins(dp(12), 0, dp(12), 0);
             card.setLayoutParams(lp);
             if (viewAllId > 0) card.setNextFocusDownId(viewAllId);
@@ -461,6 +479,7 @@ public class HomeActivity extends AppCompatActivity {
 
         hsv.addView(row);
         cont.addView(hsv);
+        restoreFocusIfNeeded();
 
         new Handler(Looper.getMainLooper()).post(new Runnable() {
             @Override
@@ -489,10 +508,15 @@ public class HomeActivity extends AppCompatActivity {
         focusScale(card);
         card.setPadding(6, 6, 6, 6);
         card.setFocusable(true);
+        final String focusTag = "card_" + item.guid;
+        focusViews.put(focusTag, card);
+        card.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus) lastFocusedTag = focusTag;
+        });
 
         RoundedImageView poster = new RoundedImageView(this);
         poster.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, 280));
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(135)));
         poster.setScaleType(ImageView.ScaleType.CENTER_CROP);
         poster.setCornerRadius(10);
         poster.setBackgroundColor(c(R.color.bg_input));
@@ -524,7 +548,7 @@ public class HomeActivity extends AppCompatActivity {
 
         TextView title = new TextView(this);
         title.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, 85));
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(36)));
         title.setSingleLine(true);
         title.setHorizontallyScrolling(true);
         title.setEllipsize(android.text.TextUtils.TruncateAt.MARQUEE);
@@ -611,7 +635,7 @@ public class HomeActivity extends AppCompatActivity {
     private void populateGrid(LinearLayout cont, List<PlayListItem> items) {
         HorizontalScrollView hsv = new HorizontalScrollView(this);
         hsv.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, 410));
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(184)));
         hsv.setScrollBarStyle(View.SCROLLBARS_INSIDE_OVERLAY);
 
         LinearLayout row = new LinearLayout(this);
@@ -667,6 +691,7 @@ public class HomeActivity extends AppCompatActivity {
 
         hsv.addView(row);
         cont.addView(hsv);
+        restoreFocusIfNeeded();
 
         new Handler(Looper.getMainLooper()).post(new Runnable() {
             @Override
@@ -710,13 +735,14 @@ public class HomeActivity extends AppCompatActivity {
                 badge.setText(vote);
             }
             badge.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_caption));
-            badge.setTextColor(0xFFFFD479);
-            badge.setBackgroundColor(0x99000000);
-            badge.setPadding(dp(6), dp(2), dp(6), dp(2));
+            badge.setTextColor(0xFFFFFFFF);
+            badge.setBackgroundResource(R.drawable.bg_rating_badge);
+            badge.setPadding(dp(8), dp(2), dp(8), dp(2));
+            badge.setTypeface(Typeface.DEFAULT_BOLD);
             FrameLayout.LayoutParams blp = new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
-                    Gravity.TOP | Gravity.END);
-            blp.setMargins(0, dp(6), dp(6), 0);
+                    Gravity.BOTTOM | Gravity.END);
+            blp.setMargins(0, 0, dp(6), dp(6));
             badge.setLayoutParams(blp);
             posterWrap.addView(badge);
         }
@@ -756,8 +782,10 @@ public class HomeActivity extends AppCompatActivity {
             @Override
             public void onFocusChange(View v, boolean hasFocus) {
                 title.setSelected(hasFocus);
+                if (hasFocus) lastFocusedTag = "card_" + item.guid;
             }
         });
+        focusViews.put("card_" + item.guid, card);
 
         card.setTag(item);
         card.setOnClickListener(v -> onItemClick((PlayListItem) card.getTag()));
@@ -2104,10 +2132,27 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     /** TV 焦点缩放：API 21+ 使用 stateListAnimator，低版本由 selector 描边承担 */
+    /** 从详情/播放返回后，把焦点还给之前那张卡片 */
+    private void restoreFocusIfNeeded() {
+        if (!focusRestorePending || lastFocusedTag == null) return;
+        View target = focusViews.get(lastFocusedTag);
+        if (target != null) {
+            focusRestorePending = false;
+            target.post(() -> target.requestFocus());
+        }
+    }
+
     private void focusScale(View v) {
-        if (Build.VERSION.SDK_INT >= 21 && v != null) {
+        if (v == null) return;
+        if (Build.VERSION.SDK_INT >= 21) {
             v.setStateListAnimator(android.animation.AnimatorInflater.loadStateListAnimator(this,
                     R.animator.focus_scale));
+        }
+        // API 28+ 用主色光晕替代缩放（官方 TV 的 Glow 焦点规范）
+        if (Build.VERSION.SDK_INT >= 28) {
+            v.setOutlineProvider(android.view.ViewOutlineProvider.BACKGROUND);
+            v.setOutlineSpotShadowColor(c(R.color.border_focused));
+            v.setOutlineAmbientShadowColor(c(R.color.border_focused));
         }
     }
 
@@ -2455,7 +2500,7 @@ public class HomeActivity extends AppCompatActivity {
         // ── 横向滚动卡片预览（和其他媒体库预览一致的高度）──
         HorizontalScrollView hsv = new HorizontalScrollView(this);
         hsv.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, 410));
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(184)));
         hsv.setScrollBarStyle(View.SCROLLBARS_INSIDE_OVERLAY);
 
         LinearLayout row = new LinearLayout(this);

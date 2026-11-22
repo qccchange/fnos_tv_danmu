@@ -14,6 +14,10 @@
                 android:propertyName="translationZ"
                 android:valueTo="4"
                 android:duration="120" />
+            <objectAnimator
+                android:propertyName="elevation"
+                android:valueTo="8"
+                android:duration="120" />
         </set>
     </item>
     <item>
@@ -28,6 +32,10 @@
                 android:duration="120" />
             <objectAnimator
                 android:propertyName="translationZ"
+                android:valueTo="0"
+                android:duration="120" />
+            <objectAnimator
+                android:propertyName="elevation"
                 android:valueTo="0"
                 android:duration="120" />
         </set>
