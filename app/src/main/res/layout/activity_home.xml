@@ -17,7 +17,10 @@ DPAD 遥控器友好
         android:id="@+id/contentContainer"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1">
+        android:layout_weight="1"
+        android:paddingStart="@dimen/tv_gap_lg"
+        android:paddingEnd="@dimen/tv_gap_lg"
+        android:paddingTop="@dimen/tv_gap_md">
 
         <!-- Tab 1: 影视 -->
         <LinearLayout
