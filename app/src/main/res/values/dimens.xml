@@ -9,6 +9,11 @@
     <dimen name="tv_text_body">16sp</dimen>
     <dimen name="tv_text_title">20sp</dimen>
     <dimen name="tv_text_headline">26sp</dimen>
+    <!-- 对齐官方 TV 字号梯度：24 / 32 / 36 / 45 -->
+    <dimen name="tv_text_title_large">24sp</dimen>
+    <dimen name="tv_text_headline_large">32sp</dimen>
+    <dimen name="tv_text_display_small">36sp</dimen>
+    <dimen name="tv_text_display_medium">45sp</dimen>
 
     <!-- 焦点与圆角 -->
     <dimen name="tv_focus_stroke">3dp</dimen>

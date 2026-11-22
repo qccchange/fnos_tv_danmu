@@ -378,7 +378,7 @@ public class HomeActivity extends AppCompatActivity {
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         header.setText(libTitle);
         header.setTextColor(c(R.color.text_primary));
-        header.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_title));
+        header.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_title_large));
         header.setTypeface(Typeface.DEFAULT_BOLD);
         headerRow.addView(header);
 
@@ -987,8 +987,8 @@ public class HomeActivity extends AppCompatActivity {
         sortColumnBtn.setFocusable(true);
         sortColumnBtn.setPadding(14, 0, 14, 0);
         sortColumnBtn.setOnFocusChangeListener((v, hasFocus) -> {
-            v.setScaleX(hasFocus ? 1.08f : 1.0f);
-            v.setScaleY(hasFocus ? 1.08f : 1.0f);
+            v.setScaleX(hasFocus ? 1.0f : 1.0f);
+            v.setScaleY(hasFocus ? 1.0f : 1.0f);
         });
         final Button colBtnRef = sortColumnBtn;
         sortColumnBtn.setOnClickListener(v ->
@@ -1033,8 +1033,8 @@ public class HomeActivity extends AppCompatActivity {
         sortOrderBtn.setFocusable(true);
         sortOrderBtn.setPadding(14, 0, 14, 0);
         sortOrderBtn.setOnFocusChangeListener((v, hasFocus) -> {
-            v.setScaleX(hasFocus ? 1.08f : 1.0f);
-            v.setScaleY(hasFocus ? 1.08f : 1.0f);
+            v.setScaleX(hasFocus ? 1.0f : 1.0f);
+            v.setScaleY(hasFocus ? 1.0f : 1.0f);
         });
         final Button orderBtnRef = sortOrderBtn;
         sortOrderBtn.setOnClickListener(v ->
@@ -1224,7 +1224,7 @@ public class HomeActivity extends AppCompatActivity {
             TextView heroTitle = new TextView(this);
             heroTitle.setText(detailTitle(item, info, epTitle, series, epNum));
             heroTitle.setTextColor(c(R.color.text_white));
-            heroTitle.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_headline));
+            heroTitle.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_display_small));
             heroTitle.setTypeface(Typeface.DEFAULT_BOLD);
             heroTitle.setMaxLines(2);
             heroTitle.setEllipsize(TextUtils.TruncateAt.END);
@@ -1365,7 +1365,7 @@ public class HomeActivity extends AppCompatActivity {
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
             titleBig.setText(bigTitle);
             titleBig.setTextColor(c(R.color.text_primary));
-            titleBig.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_headline));
+            titleBig.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_headline_large));
             titleBig.setTypeface(Typeface.DEFAULT_BOLD);
             metaCard.addView(titleBig);
         }
@@ -1545,8 +1545,8 @@ public class HomeActivity extends AppCompatActivity {
         playBtn.setOnFocusChangeListener((v, hasFocus) -> {
             if (hasFocus) {
                 playBtn.setBackgroundColor(c(R.color.bg_chip_focus));
-                playBtn.setScaleX(1.05f);
-                playBtn.setScaleY(1.05f);
+                playBtn.setScaleX(1.0f);
+                playBtn.setScaleY(1.0f);
             } else {
                 playBtn.setBackgroundColor(c(R.color.transparent));
                 playBtn.setScaleX(1.0f);
@@ -1859,8 +1859,8 @@ public class HomeActivity extends AppCompatActivity {
             playEp.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_caption));
             playEp.setFocusable(true);
             playEp.setOnFocusChangeListener((v, hasFocus) -> {
-                playEp.setScaleX(hasFocus ? 1.08f : 1.0f);
-                playEp.setScaleY(hasFocus ? 1.08f : 1.0f);
+                playEp.setScaleX(hasFocus ? 1.0f : 1.0f);
+                playEp.setScaleY(hasFocus ? 1.0f : 1.0f);
             });
             playEp.setPadding(14, 0, 14, 0);
             playEp.setOnClickListener(v -> launchPlayer(eg, et, eTV, eEp, epPo, epCa, epTs, epDu, epPG));
@@ -2431,7 +2431,7 @@ public class HomeActivity extends AppCompatActivity {
         header.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         header.setText("直播频道");
         header.setTextColor(c(R.color.text_primary));
-        header.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_title));
+        header.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_title_large));
         header.setTypeface(Typeface.DEFAULT_BOLD);
         headerRow.addView(header);
 
