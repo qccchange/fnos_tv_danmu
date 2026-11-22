@@ -40,7 +40,7 @@ public class SubtitleStyleManager {
     /** 样式值对象（RGB 不含 alpha，透明度单独存） */
     public static class Style {
         public float sizeDp = 28f;
-        public int posY = 8;              // 距底部百分比
+        public int posY = 16;             // 距底部百分比（默认避开控制栏）
         public int color = Color.WHITE;   // RGB
         public int opacity = 100;         // 0~100
         public boolean overrideAss = true;
@@ -105,7 +105,7 @@ public class SubtitleStyleManager {
             if (subtitleView instanceof SubtitleView) {
                 SubtitleView sv = (SubtitleView) subtitleView;
                 sv.setApplyEmbeddedStyles(false);
-                sv.setBottomPaddingFraction(style.posY / 100f);
+                sv.setBottomPaddingFraction(Math.max(style.posY / 100f, 0.15f));
                 sv.setFractionalTextSize(style.sizeDp / 1080f, true);
             }
             if (subtitleView.getLayoutParams() instanceof ViewGroup.MarginLayoutParams) {

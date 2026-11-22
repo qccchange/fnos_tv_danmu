@@ -83,7 +83,9 @@ public class SubtitleMergeOverlay {
 
         FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) overlay.getLayoutParams();
         lp.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
-        lp.bottomMargin = (int) (style.posY / 100f * screenH) + extraBottomPx;
+        // 播放控制栏约占底部 120px，字幕至少抬到 80dp 之上，避免与按钮重叠
+        int minBottom = (int) (80 * parent.getResources().getDisplayMetrics().density);
+        lp.bottomMargin = Math.max((int) (style.posY / 100f * screenH), minBottom) + extraBottomPx;
         overlay.setLayoutParams(lp);
         refresh();
     }

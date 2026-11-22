@@ -86,6 +86,14 @@ public class PlayerActivity extends AppCompatActivity {
     private int customQualityBitrate = 0;   // 非原画时的码率
     private String customPlayLink = "";     // 非原画时的 play_link
     private static final String TAG = "Player";
+    private int c(int res) {
+        return androidx.core.content.ContextCompat.getColor(this, res);
+    }
+
+    private float dimen(int res) {
+        return getResources().getDimension(res);
+    }
+
 
     private static final int[] RATIO_MODES = {0, 1, 2};
     private static final String[] RATIO_LABELS = {"适应", "拉伸", "缩放"};
@@ -503,9 +511,9 @@ public class PlayerActivity extends AppCompatActivity {
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         ((FrameLayout.LayoutParams) tvSeekOverlay.getLayoutParams()).gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
         tvSeekOverlay.setPadding(32, 16, 32, 16);
-        tvSeekOverlay.setTextColor(Color.WHITE);
-        tvSeekOverlay.setTextSize(22);
-        tvSeekOverlay.setBackgroundColor(0x88000000);
+        tvSeekOverlay.setTextColor(c(R.color.text_white));
+        tvSeekOverlay.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_body));
+        tvSeekOverlay.setBackgroundColor(c(R.color.bg_scrim));
         tvSeekOverlay.setVisibility(View.GONE);
         ((FrameLayout) findViewById(android.R.id.content)).addView(tvSeekOverlay);
 
@@ -573,7 +581,7 @@ public class PlayerActivity extends AppCompatActivity {
         // 字幕样式：白色文字，透明背景，黑色描边
         com.google.android.exoplayer2.ui.CaptionStyleCompat captionStyle =
                 new com.google.android.exoplayer2.ui.CaptionStyleCompat(
-                        Color.WHITE,                    // 前景色
+                        c(R.color.text_white),          // 前景色
                         Color.TRANSPARENT,              // 背景色（透明）
                         Color.TRANSPARENT,              // 窗口色（透明）
                         com.google.android.exoplayer2.ui.CaptionStyleCompat.EDGE_TYPE_OUTLINE,

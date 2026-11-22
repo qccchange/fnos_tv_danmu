@@ -31,5 +31,6 @@
     <!-- 状态 -->
     <color name="success">#FF81C784</color>
     <color name="error">#FFE57373</color>
+    <color name="bg_scrim">#AA000000</color>
     <color name="transparent">#00000000</color>
 </resources>
