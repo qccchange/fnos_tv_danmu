@@ -476,7 +476,7 @@ public class HomeActivity extends AppCompatActivity {
 
         HorizontalScrollView hsv = new HorizontalScrollView(this);
         hsv.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(184)));
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(220)));
         hsv.setScrollBarStyle(View.SCROLLBARS_INSIDE_OVERLAY);
 
         LinearLayout row = new LinearLayout(this);
@@ -791,7 +791,7 @@ public class HomeActivity extends AppCompatActivity {
     private void populateGrid(LinearLayout cont, List<PlayListItem> items) {
         HorizontalScrollView hsv = new HorizontalScrollView(this);
         hsv.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(184)));
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(220)));
         hsv.setScrollBarStyle(View.SCROLLBARS_INSIDE_OVERLAY);
 
         LinearLayout row = new LinearLayout(this);
@@ -836,7 +836,7 @@ public class HomeActivity extends AppCompatActivity {
 
         for (int i = 0; i < items.size(); i++) {
             View card = makeItemCard(items.get(i));
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(220, 380);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(220, ViewGroup.LayoutParams.WRAP_CONTENT);
             lp.setMargins(dp(12), 0, dp(12), 0);
             card.setLayoutParams(lp);
             // 卡片：↑到当前查看全部，↓到下一个查看全部
@@ -907,7 +907,8 @@ public class HomeActivity extends AppCompatActivity {
         // 底部文字条：类型 + 标题
         LinearLayout textBar = new LinearLayout(this);
         textBar.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, 88));
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        textBar.setMinimumHeight(dp(52));
         textBar.setOrientation(LinearLayout.VERTICAL);
         textBar.setGravity(Gravity.CENTER_VERTICAL);
         textBar.setPadding(0, 4, 0, 4);
@@ -2707,7 +2708,7 @@ public class HomeActivity extends AppCompatActivity {
         // ── 横向滚动卡片预览（和其他媒体库预览一致的高度）──
         HorizontalScrollView hsv = new HorizontalScrollView(this);
         hsv.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(184)));
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(220)));
         hsv.setScrollBarStyle(View.SCROLLBARS_INSIDE_OVERLAY);
 
         LinearLayout row = new LinearLayout(this);
@@ -2717,7 +2718,7 @@ public class HomeActivity extends AppCompatActivity {
             // 焦点链：卡片 ↑ 到查看全部按钮，↓ 到底部菜单栏
             for (int i = 0; i < items.size(); i++) {
                 View card = makeLiveChannelCard(items.get(i));
-                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(220, 380);
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(220, ViewGroup.LayoutParams.WRAP_CONTENT);
                 lp.setMargins(dp(12), 0, dp(12), 0);
                 card.setLayoutParams(lp);
                 card.setNextFocusUpId(viewAll.getId());
@@ -2767,7 +2768,8 @@ public class HomeActivity extends AppCompatActivity {
         // 底部文字条：类型 + 标题
         LinearLayout textBar = new LinearLayout(this);
         textBar.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, 88));
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        textBar.setMinimumHeight(dp(52));
         textBar.setOrientation(LinearLayout.VERTICAL);
         textBar.setGravity(Gravity.CENTER_VERTICAL);
         textBar.setPadding(0, 4, 0, 4);
