@@ -57,6 +57,8 @@ public class PlayerActivity extends AppCompatActivity {
     private Button activeTab;
     private final java.util.List<Button> tabButtons = new java.util.ArrayList<>();
     private final java.util.Map<Integer, Integer> originalVisibility = new java.util.HashMap<>();
+    private final java.util.Map<Integer, Integer> naturalVisibility = new java.util.HashMap<>();
+    private boolean filteringPanel;
 
     private Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable infoRefreshR = new Runnable() {
@@ -1398,6 +1400,7 @@ public class PlayerActivity extends AppCompatActivity {
             View v = findViewById(id);
             if (v == null) continue;
             originalVisibility.put(id, v.getVisibility());
+            naturalVisibility.put(id, v.getVisibility());
             ViewGroup old = (ViewGroup) v.getParent();
             if (old != null) old.removeView(v);
             GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
@@ -1453,11 +1456,18 @@ public class PlayerActivity extends AppCompatActivity {
                 : tabId == R.id.tab_video ? video : new int[0];
         java.util.Set<Integer> allowed = new java.util.HashSet<>();
         for (int id : chosen) allowed.add(id);
+        filteringPanel = true;
+        java.util.Set<Integer> dynamic = new java.util.HashSet<>(java.util.Arrays.asList(
+                R.id.btnEpisodeList, R.id.btnNextEp, R.id.btnQuality, R.id.btnBrightness));
         for (java.util.Map.Entry<Integer, Integer> e : originalVisibility.entrySet()) {
+            if (dynamic.contains(e.getKey())) continue; // 动态显隐交给业务代码，不强制覆盖
             View v = findViewById(e.getKey());
-            if (v != null) v.setVisibility(allowed.contains(e.getKey())
-                    ? e.getValue() : View.GONE);
+            if (v == null) continue;
+            Integer natural = naturalVisibility.get(e.getKey());
+            v.setVisibility(allowed.contains(e.getKey())
+                    ? (natural != null ? natural : e.getValue()) : View.GONE);
         }
+        filteringPanel = false;
         View danmuBtn = findViewById(R.id.btn_panel_danmu);
         if (danmuBtn != null) danmuBtn.setVisibility(tabId == R.id.tab_danmu ? View.VISIBLE : View.GONE);
         View lockBtn = findViewById(R.id.btn_panel_lock);
