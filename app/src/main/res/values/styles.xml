@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- API 21 以下无 stateListAnimator，焦点反馈由 selector 的描边承担 -->
+    <style name="FntvFocusable" />
+</resources>

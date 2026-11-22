@@ -176,10 +176,41 @@ DPAD 遥控器友好
                     android:orientation="vertical"
                     android:padding="16dp">
 
+                    <!-- 主题：深色默认 / 浅色可选 -->
+                    <RelativeLayout
+                        android:id="@+id/rlThemeSetting"
+                        android:layout_width="match_parent"
+                        android:layout_height="@dimen/tv_control_h"
+                        android:background="@drawable/bg_input"
+                        android:focusable="true"
+                        android:paddingLeft="12dp"
+                        android:paddingRight="12dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_centerVertical="true"
+                            android:text="主题"
+                            android:textColor="@color/text_primary"
+                            android:textSize="@dimen/tv_text_body" />
+
+                        <TextView
+                            android:id="@+id/tvThemeValue"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_alignParentRight="true"
+                            android:layout_centerVertical="true"
+                            android:text="深色"
+                            android:textColor="@color/colorAccent"
+                            android:textSize="@dimen/tv_text_body" />
+
+                    </RelativeLayout>
+
                     <!-- 账户信息 -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
                         android:background="@drawable/bg_card"
                         android:orientation="vertical"
                         android:padding="16dp">

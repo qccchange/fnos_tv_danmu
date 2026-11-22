@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="FntvFocusable">
+        <item name="android:stateListAnimator">@animator/focus_scale</item>
+    </style>
+</resources>

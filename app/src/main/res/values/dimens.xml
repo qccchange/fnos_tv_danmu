@@ -2,4 +2,29 @@
 <resources>
     <!-- 用于 ScrollView 内容最小高度，实现居中效果 -->
     <dimen name="min_height_fill">480dp</dimen>
+
+    <!-- ===== TV 10-foot 设计令牌（Phase 1） ===== -->
+    <!-- 字号：辅助 >=14sp，正文 16sp，标题 20sp，大标题 26sp -->
+    <dimen name="tv_text_caption">14sp</dimen>
+    <dimen name="tv_text_body">16sp</dimen>
+    <dimen name="tv_text_title">20sp</dimen>
+    <dimen name="tv_text_headline">26sp</dimen>
+
+    <!-- 焦点与圆角 -->
+    <dimen name="tv_focus_stroke">3dp</dimen>
+    <dimen name="tv_card_radius">12dp</dimen>
+
+    <!-- 安全区：1920x1080 电视按 5% overscan 预留 -->
+    <dimen name="tv_safe_h">48dp</dimen>
+    <dimen name="tv_safe_v">27dp</dimen>
+
+    <!-- 控件尺寸 -->
+    <dimen name="tv_control_h">48dp</dimen>
+    <dimen name="tv_cta_h">56dp</dimen>
+    <dimen name="tv_icon_tile">40dp</dimen>
+
+    <!-- 间距 -->
+    <dimen name="tv_gap_sm">8dp</dimen>
+    <dimen name="tv_gap_md">16dp</dimen>
+    <dimen name="tv_gap_lg">24dp</dimen>
 </resources>

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 单个媒体卡片布局 -->
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/FntvFocusable"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="@drawable/bg_media_card"

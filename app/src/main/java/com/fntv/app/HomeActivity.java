@@ -17,6 +17,7 @@ import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
 import android.widget.*;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 import com.fntv.app.api.FnApiManager;
 import com.fntv.app.api.model.*;
 import com.fntv.app.util.SimpleImageLoader;
@@ -103,7 +104,7 @@ public class HomeActivity extends AppCompatActivity {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             getWindow().setStatusBarColor(Color.TRANSPARENT);
-            getWindow().setNavigationBarColor(0xFF1A1A1A);
+            getWindow().setNavigationBarColor(c(R.color.bg_dark));
         }
 
         prefs = getSharedPreferences("fntv_prefs", MODE_PRIVATE);
@@ -315,7 +316,7 @@ public class HomeActivity extends AppCompatActivity {
                     ViewGroup.LayoutParams.MATCH_PARENT, 120));
             e.setGravity(Gravity.CENTER);
             e.setText("暂无影视内容");
-            e.setTextColor(0xFF808080);
+            e.setTextColor(c(R.color.text_hint));
             e.setTextSize(14);
             moviesContainer.addView(e);
         }
@@ -376,7 +377,7 @@ public class HomeActivity extends AppCompatActivity {
         header.setLayoutParams(new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         header.setText(libTitle);
-        header.setTextColor(0xFFEEEEEE);
+        header.setTextColor(c(R.color.text_primary));
         header.setTextSize(18);
         header.setTypeface(Typeface.DEFAULT_BOLD);
         headerRow.addView(header);
@@ -386,15 +387,15 @@ public class HomeActivity extends AppCompatActivity {
                 ViewGroup.LayoutParams.WRAP_CONTENT, 68));
         viewAll.setBackgroundResource(R.drawable.bg_input);
         viewAll.setText("查看全部 ›");
-        viewAll.setTextColor(0xFFB0B0B0);
+        viewAll.setTextColor(c(R.color.text_secondary));
         viewAll.setTextSize(14);
         viewAll.setFocusable(true);
         viewAll.setId(View.generateViewId());
         viewAll.setPadding(24, 0, 24, 0);
         viewAll.setOnClickListener(v -> browseItems(libGuid, libTitle));
         viewAll.setOnFocusChangeListener((v, hasFocus) -> {
-            viewAll.setTextColor(hasFocus ? 0xFF81C784 : 0xFFB0B0B0);
-            viewAll.setBackgroundColor(hasFocus ? 0x44FFFFFF : 0x00000000);
+            viewAll.setTextColor(hasFocus ? 0xFF81C784 : c(R.color.text_secondary));
+            viewAll.setBackgroundColor(hasFocus ? c(R.color.bg_chip_focus) : c(R.color.transparent));
         });
         headerRow.setOnClickListener(v -> browseItems(libGuid, libTitle));
         headerRow.setFocusable(true);
@@ -485,6 +486,7 @@ public class HomeActivity extends AppCompatActivity {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setBackgroundResource(R.drawable.bg_media_card);
+        focusScale(card);
         card.setPadding(6, 6, 6, 6);
         card.setFocusable(true);
 
@@ -493,7 +495,7 @@ public class HomeActivity extends AppCompatActivity {
                 ViewGroup.LayoutParams.MATCH_PARENT, 280));
         poster.setScaleType(ImageView.ScaleType.CENTER_CROP);
         poster.setCornerRadius(10);
-        poster.setBackgroundColor(0xFF333333);
+        poster.setBackgroundColor(c(R.color.bg_input));
         String imgUrl = makePosterUrl(item.poster);
         if (imgUrl != null) { poster.setTag(imgUrl); }
         card.addView(poster);
@@ -515,7 +517,7 @@ public class HomeActivity extends AppCompatActivity {
         if (pct < 100) {
             View r = new View(HomeActivity.this);
             r.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 100 - pct));
-            r.setBackgroundColor(0xFF555555);
+            r.setBackgroundColor(c(R.color.bg_button_normal));
             pBar.addView(r);
         }
         card.addView(pBar);
@@ -528,7 +530,7 @@ public class HomeActivity extends AppCompatActivity {
         title.setEllipsize(android.text.TextUtils.TruncateAt.MARQUEE);
         title.setMarqueeRepeatLimit(-1);
         title.setTextSize(13);
-        title.setTextColor(0xFFEEEEEE);
+        title.setTextColor(c(R.color.text_primary));
         title.setGravity(Gravity.CENTER_VERTICAL);
         title.setPadding(4, 0, 4, 0);
         title.setText(formatContinueTitle(item));
@@ -680,6 +682,7 @@ public class HomeActivity extends AppCompatActivity {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setBackgroundResource(R.drawable.bg_media_card);
+        focusScale(card);
         card.setPadding(6, 6, 6, 6);
         card.setFocusable(true);
 
@@ -688,7 +691,7 @@ public class HomeActivity extends AppCompatActivity {
         iv.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, 280));
         iv.setScaleType(ImageView.ScaleType.FIT_XY);
-        iv.setBackgroundColor(0xFF333333);
+        iv.setBackgroundColor(c(R.color.bg_input));
         iv.setCornerRadius(10);
         String imgUrl = makePosterUrl(item.poster);
         if (imgUrl != null) { iv.setTag(imgUrl); }
@@ -704,7 +707,7 @@ public class HomeActivity extends AppCompatActivity {
 
         TextView tag = new TextView(this);
         tag.setTextSize(9);
-        tag.setTextColor(0xFF78909C);
+        tag.setTextColor(c(R.color.text_hint));
         String t = item.type;
         if ("TV".equals(t)) t = "剧集";
         else if ("Movie".equals(t)) t = "电影";
@@ -718,7 +721,7 @@ public class HomeActivity extends AppCompatActivity {
         title.setEllipsize(TextUtils.TruncateAt.MARQUEE);
         title.setMarqueeRepeatLimit(-1);
         title.setTextSize(11);
-        title.setTextColor(0xFFEEEEEE);
+        title.setTextColor(c(R.color.text_primary));
         title.setText(item.title != null ? item.title : "未知");
         textBar.addView(title);
 
@@ -794,7 +797,7 @@ public class HomeActivity extends AppCompatActivity {
                             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
                     h.setPadding(6, 8, 6, 4);
                     h.setText(title + "  (" + total + "项)");
-                    h.setTextColor(0xFFEEEEEE);
+                    h.setTextColor(c(R.color.text_primary));
                     h.setTextSize(14);
                     container.addView(h);
 
@@ -849,7 +852,7 @@ public class HomeActivity extends AppCompatActivity {
                             ViewGroup.LayoutParams.MATCH_PARENT, 120));
                     e.setGravity(Gravity.CENTER);
                     e.setText("暂无内容");
-                    e.setTextColor(0xFF808080);
+                    e.setTextColor(c(R.color.text_hint));
                     e.setTextSize(14);
                     container.addView(e);
                 }
@@ -878,7 +881,7 @@ public class HomeActivity extends AppCompatActivity {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         h.setPadding(6, 8, 6, 4);
         h.setText(title + "  (" + total + "项)");
-        h.setTextColor(0xFFEEEEEE);
+        h.setTextColor(c(R.color.text_primary));
         h.setTextSize(14);
         container.addView(h);
 
@@ -943,7 +946,7 @@ public class HomeActivity extends AppCompatActivity {
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         sortLabel.setGravity(Gravity.CENTER_VERTICAL);
         sortLabel.setText("排序方式: ");
-        sortLabel.setTextColor(0xFFB0B0B0);
+        sortLabel.setTextColor(c(R.color.text_secondary));
         sortLabel.setTextSize(13);
         bar.addView(sortLabel);
 
@@ -954,7 +957,7 @@ public class HomeActivity extends AppCompatActivity {
         sortColumnBtn.setBackgroundResource(R.drawable.bg_btn_primary);
         String[] colLabels = {"添加日期", "发行日期"};
         sortColumnBtn.setText(colLabels[libSortColumnIndex] + " ▾");
-        sortColumnBtn.setTextColor(0xFFEEEEEE);
+        sortColumnBtn.setTextColor(c(R.color.text_primary));
         sortColumnBtn.setTextSize(12);
         sortColumnBtn.setFocusable(true);
         sortColumnBtn.setPadding(14, 0, 14, 0);
@@ -989,7 +992,7 @@ public class HomeActivity extends AppCompatActivity {
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         orderLabel.setGravity(Gravity.CENTER_VERTICAL);
         orderLabel.setText("顺序: ");
-        orderLabel.setTextColor(0xFFB0B0B0);
+        orderLabel.setTextColor(c(R.color.text_secondary));
         orderLabel.setTextSize(13);
         bar.addView(orderLabel);
 
@@ -1000,7 +1003,7 @@ public class HomeActivity extends AppCompatActivity {
         sortOrderBtn.setBackgroundResource(R.drawable.bg_btn_primary);
         String[] orderLabels = {"升序", "降序"};
         sortOrderBtn.setText(orderLabels[libSortOrderIndex] + " ▾");
-        sortOrderBtn.setTextColor(0xFFEEEEEE);
+        sortOrderBtn.setTextColor(c(R.color.text_primary));
         sortOrderBtn.setTextSize(12);
         sortOrderBtn.setFocusable(true);
         sortOrderBtn.setPadding(14, 0, 14, 0);
@@ -1126,7 +1129,7 @@ public class HomeActivity extends AppCompatActivity {
             int posterW = screenH * 2 / 3;
             posterL.setLayoutParams(new LinearLayout.LayoutParams(posterW, screenH));
             posterL.setScaleType(ImageView.ScaleType.FIT_XY);
-            posterL.setBackgroundColor(0xFF1A1A1A);
+            posterL.setBackgroundColor(c(R.color.bg_dark));
             posterL.setCornerRadius(10);
             if (posterLand != null) {
                 posterL.setTag(posterLand);
@@ -1162,7 +1165,7 @@ public class HomeActivity extends AppCompatActivity {
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
             poster.setAdjustViewBounds(true);
             poster.setScaleType(ImageView.ScaleType.FIT_CENTER);
-            poster.setBackgroundColor(0xFF2A2A2A);
+            poster.setBackgroundColor(c(R.color.bg_card));
             poster.setCornerRadius(10);
             if (pUrl != null) { poster.setTag(pUrl); }
             content.addView(poster);
@@ -1219,7 +1222,7 @@ public class HomeActivity extends AppCompatActivity {
         titleBig.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         titleBig.setText(bigTitle.trim());
-        titleBig.setTextColor(0xFFFFFFFF);
+        titleBig.setTextColor(c(R.color.text_white));
         titleBig.setTextSize(22);
         titleBig.setTypeface(Typeface.DEFAULT_BOLD);
         metaCard.addView(titleBig);
@@ -1264,7 +1267,7 @@ public class HomeActivity extends AppCompatActivity {
         if (date != null && !date.isEmpty()) mt.append("  ·  ").append(date);
 
         meta.setText(mt.toString());
-        meta.setTextColor(0xFFB0B0B0);
+        meta.setTextColor(c(R.color.text_secondary));
         meta.setTextSize(13);
         metaCard.addView(meta);
 
@@ -1284,7 +1287,7 @@ public class HomeActivity extends AppCompatActivity {
 
             TextView ovLabel = new TextView(this);
             ovLabel.setText("简介");
-            ovLabel.setTextColor(0xFF78909C);
+            ovLabel.setTextColor(c(R.color.text_hint));
             ovLabel.setTextSize(11);
             overviewCard.addView(ovLabel);
 
@@ -1294,13 +1297,13 @@ public class HomeActivity extends AppCompatActivity {
             ovScroll.setFocusable(true);
             ovScroll.setDescendantFocusability(ViewGroup.FOCUS_BEFORE_DESCENDANTS);
             ovScroll.setOnFocusChangeListener((v, hasFocus) ->
-                    v.setBackgroundColor(hasFocus ? 0x33FFFFFF : 0x00000000));
+                    v.setBackgroundColor(hasFocus ? c(R.color.bg_chip_focus) : c(R.color.transparent)));
             TextView ov = new TextView(this);
             ov.setLayoutParams(new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
             ov.setPadding(0, 6, 0, 0);
             ov.setText(overview);
-            ov.setTextColor(0xFFCCCCCC);
+            ov.setTextColor(c(R.color.text_secondary));
             ov.setTextSize(14);
             ov.setLineSpacing(6, 1);
             ovScroll.addView(ov);
@@ -1350,7 +1353,7 @@ public class HomeActivity extends AppCompatActivity {
             float r = 10 * getResources().getDisplayMetrics().density;
             android.graphics.drawable.GradientDrawable gd = new android.graphics.drawable.GradientDrawable();
             gd.setCornerRadii(new float[]{r, r, r, r, r, r, r, r});
-            gd.setColor(0xFF455A64);
+            gd.setColor(c(R.color.bg_button_normal));
             progressLayer.setBackgroundDrawable(gd);
 
             View fill = new View(HomeActivity.this);
@@ -1363,7 +1366,7 @@ public class HomeActivity extends AppCompatActivity {
 
             View rest = new View(HomeActivity.this);
             rest.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 100 - progressPct));
-            rest.setBackgroundColor(0x00000000); // 透明
+            rest.setBackgroundColor(c(R.color.transparent)); // 透明
             progressLayer.addView(rest);
 
             playFrame.addView(progressLayer);
@@ -1378,14 +1381,14 @@ public class HomeActivity extends AppCompatActivity {
         playBtn.setBackgroundDrawable(null);
         playBtn.setFocusable(true);
         playBtn.setGravity(Gravity.CENTER);
-        playBtn.setTextColor(0xFFFFFFFF);
+        playBtn.setTextColor(c(R.color.text_white));
         playBtn.setOnFocusChangeListener((v, hasFocus) -> {
             if (hasFocus) {
-                playBtn.setBackgroundColor(0x55FFFFFF);
+                playBtn.setBackgroundColor(c(R.color.bg_chip_focus));
                 playBtn.setScaleX(1.05f);
                 playBtn.setScaleY(1.05f);
             } else {
-                playBtn.setBackgroundColor(0x00000000);
+                playBtn.setBackgroundColor(c(R.color.transparent));
                 playBtn.setScaleX(1.0f);
                 playBtn.setScaleY(1.0f);
             }
@@ -1451,7 +1454,7 @@ public class HomeActivity extends AppCompatActivity {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         h.setPadding(0, 14, 0, 14);
         h.setText("选择剧集");
-        h.setTextColor(0xFFEEEEEE);
+        h.setTextColor(c(R.color.text_primary));
         h.setTextSize(22);
         h.setTypeface(Typeface.DEFAULT_BOLD);
         content.addView(h);
@@ -1467,6 +1470,7 @@ public class HomeActivity extends AppCompatActivity {
                     LinearLayout card = new LinearLayout(HomeActivity.this);
                     card.setOrientation(LinearLayout.HORIZONTAL);
                     card.setBackgroundResource(R.drawable.bg_media_card);
+        focusScale(card);
                     card.setPadding(16, 18, 16, 18);
                     card.setFocusable(true);
                     card.setMinimumHeight(56);
@@ -1477,12 +1481,12 @@ public class HomeActivity extends AppCompatActivity {
                     tc.setGravity(Gravity.CENTER_VERTICAL);
                     TextView st = new TextView(HomeActivity.this);
                     st.setTextSize(16);
-                    st.setTextColor(0xFFEEEEEE);
+                    st.setTextColor(c(R.color.text_primary));
                     st.setText("第 " + season.seasonNumber + " 季");
                     tc.addView(st);
                     TextView ss = new TextView(HomeActivity.this);
                     ss.setTextSize(12);
-                    ss.setTextColor(0xFF808080);
+                    ss.setTextColor(c(R.color.text_hint));
                     ss.setText(season.localNumberOfEpisodes > 0 ? season.localNumberOfEpisodes + " 集" : "");
                     tc.addView(ss);
                     card.addView(tc);
@@ -1491,7 +1495,7 @@ public class HomeActivity extends AppCompatActivity {
                     ar.setLayoutParams(new LinearLayout.LayoutParams(
                             ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
                     ar.setText(">");
-                    ar.setTextColor(0xFF808080);
+                    ar.setTextColor(c(R.color.text_hint));
                     ar.setTextSize(20);
                     ar.setGravity(Gravity.CENTER);
                     ar.setPadding(8, 0, 0, 0);
@@ -1517,7 +1521,7 @@ public class HomeActivity extends AppCompatActivity {
                 ViewGroup.LayoutParams.MATCH_PARENT, 78));
         h.setGravity(Gravity.CENTER);
         h.setText("第 " + seasonNumber + " 季");
-        h.setTextColor(0xFFEEEEEE);
+        h.setTextColor(c(R.color.text_primary));
         h.setTextSize(21);
         h.setTypeface(Typeface.DEFAULT_BOLD);
         moviesContainer.addView(h);
@@ -1553,7 +1557,7 @@ public class HomeActivity extends AppCompatActivity {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         h.setPadding(0, 14, 0, 14);
         h.setText("选择剧集");
-        h.setTextColor(0xFFEEEEEE);
+        h.setTextColor(c(R.color.text_primary));
         h.setTextSize(22);
         h.setTypeface(Typeface.DEFAULT_BOLD);
         content.addView(h);
@@ -1565,6 +1569,7 @@ public class HomeActivity extends AppCompatActivity {
             LinearLayout card = new LinearLayout(this);
             card.setOrientation(LinearLayout.HORIZONTAL);
             card.setBackgroundResource(R.drawable.bg_media_card);
+        focusScale(card);
             card.setPadding(16, 18, 16, 18);
             card.setFocusable(true);
             card.setMinimumHeight(56);
@@ -1573,16 +1578,16 @@ public class HomeActivity extends AppCompatActivity {
             tc.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
             tc.setOrientation(LinearLayout.VERTICAL);
             tc.setGravity(Gravity.CENTER_VERTICAL);
-            TextView st = new TextView(this); st.setTextSize(16); st.setTextColor(0xFFEEEEEE);
+            TextView st = new TextView(this); st.setTextSize(16); st.setTextColor(c(R.color.text_primary));
             st.setText("第 " + sn + " 季"); tc.addView(st);
-            TextView ss = new TextView(this); ss.setTextSize(12); ss.setTextColor(0xFF808080);
+            TextView ss = new TextView(this); ss.setTextSize(12); ss.setTextColor(c(R.color.text_hint));
             ss.setText(eps.size() + " 集"); tc.addView(ss);
             card.addView(tc);
 
             TextView ar = new TextView(this);
             ar.setLayoutParams(new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-            ar.setText(">"); ar.setTextColor(0xFF808080); ar.setTextSize(20);
+            ar.setText(">"); ar.setTextColor(c(R.color.text_hint)); ar.setTextSize(20);
             ar.setGravity(Gravity.CENTER); ar.setPadding(8, 0, 0, 0);
             card.addView(ar);
 
@@ -1604,7 +1609,7 @@ public class HomeActivity extends AppCompatActivity {
                 ViewGroup.LayoutParams.MATCH_PARENT, 78));
         h.setGravity(Gravity.CENTER);
         h.setText("第 " + sn + " 季");
-        h.setTextColor(0xFFEEEEEE); h.setTextSize(21);
+        h.setTextColor(c(R.color.text_primary)); h.setTextSize(21);
         h.setTypeface(Typeface.DEFAULT_BOLD);
         moviesContainer.addView(h);
         moviesContainer.addView(makeSpacer(8));
@@ -1621,6 +1626,7 @@ public class HomeActivity extends AppCompatActivity {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.HORIZONTAL);
         card.setBackgroundResource(R.drawable.bg_media_card);
+        focusScale(card);
         card.setPadding(16, 18, 16, 18);
         card.setFocusable(true);
         card.setMinimumHeight(72);
@@ -1646,7 +1652,7 @@ public class HomeActivity extends AppCompatActivity {
         TextView epNum = new TextView(this);
         epNum.setLayoutParams(new LinearLayout.LayoutParams(130, ViewGroup.LayoutParams.WRAP_CONTENT));
         epNum.setTextSize(15);
-        epNum.setTextColor(isCurrent ? 0xFF81C784 : 0xFFB0B0B0);
+        epNum.setTextColor(isCurrent ? 0xFF81C784 : c(R.color.text_secondary));
         epNum.setText("EP" + (ep.episodeNumber > 0 ? ep.episodeNumber : "?"));
         infoCol.addView(epNum);
 
@@ -1658,7 +1664,7 @@ public class HomeActivity extends AppCompatActivity {
         TextView epTitle = new TextView(this);
         epTitle.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         epTitle.setTextSize(15);
-        epTitle.setTextColor(isCurrent ? 0xFF81C784 : 0xFFEEEEEE);
+        epTitle.setTextColor(isCurrent ? 0xFF81C784 : c(R.color.text_primary));
         epTitle.setSingleLine(true);
         epTitle.setEllipsize(TextUtils.TruncateAt.END);
         StringBuilder titleText = new StringBuilder();
@@ -1687,7 +1693,7 @@ public class HomeActivity extends AppCompatActivity {
                     ViewGroup.LayoutParams.WRAP_CONTENT, 76));
             playEp.setBackgroundResource(R.drawable.bg_btn_primary);
             playEp.setText("播放");
-            playEp.setTextColor(0xFFEEEEEE);
+            playEp.setTextColor(c(R.color.text_primary));
             playEp.setTextSize(12);
             playEp.setFocusable(true);
             playEp.setOnFocusChangeListener((v, hasFocus) -> {
@@ -1849,7 +1855,7 @@ public class HomeActivity extends AppCompatActivity {
                 ViewGroup.LayoutParams.MATCH_PARENT, 120));
         empty.setGravity(Gravity.CENTER);
         empty.setText("搜索无结果");
-        empty.setTextColor(0xFF808080);
+        empty.setTextColor(c(R.color.text_hint));
         empty.setTextSize(14);
         libraryContainer.addView(empty);
     }
@@ -1876,6 +1882,7 @@ public class HomeActivity extends AppCompatActivity {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.HORIZONTAL);
         card.setBackgroundResource(R.drawable.bg_media_card);
+        focusScale(card);
         card.setPadding(16, 18, 16, 18);
         card.setFocusable(true);
         card.setMinimumHeight(56);
@@ -1888,13 +1895,13 @@ public class HomeActivity extends AppCompatActivity {
 
         TextView title = new TextView(this);
         title.setTextSize(16);
-        title.setTextColor(0xFFEEEEEE);
+        title.setTextColor(c(R.color.text_primary));
         title.setText(lib.title);
         text.addView(title);
 
         TextView sub = new TextView(this);
         sub.setTextSize(12);
-        sub.setTextColor(0xFF808080);
+        sub.setTextColor(c(R.color.text_hint));
         sub.setText("分类: " + (lib.category != null ? lib.category : "未分类"));
         text.addView(sub);
 
@@ -1904,7 +1911,7 @@ public class HomeActivity extends AppCompatActivity {
         arrow.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         arrow.setText("❯");
-        arrow.setTextColor(0xFF808080);
+        arrow.setTextColor(c(R.color.text_hint));
         arrow.setTextSize(20);
         arrow.setGravity(Gravity.CENTER);
         arrow.setPadding(8, 0, 0, 0);
@@ -1919,11 +1926,36 @@ public class HomeActivity extends AppCompatActivity {
     }
 
 
+    /** 语义色辅助：让动态设置的文字/背景随深浅主题切换 */
+    private int c(int res) {
+        return androidx.core.content.ContextCompat.getColor(this, res);
+    }
+
+    /** TV 焦点缩放：API 21+ 使用 stateListAnimator，低版本由 selector 描边承担 */
+    private void focusScale(View v) {
+        if (Build.VERSION.SDK_INT >= 21 && v != null) {
+            v.setStateListAnimator(android.animation.AnimatorInflater.loadStateListAnimator(this,
+                    R.animator.focus_scale));
+        }
+    }
+
     // ==================== 设置 ====================
 
 
     private void setupSettings() {
         tvSettingUsername.setText("用户名: " + prefs.getString("user", ""));
+
+        // 主题：深色默认 / 浅色可选
+        TextView tvThemeValue = findViewById(R.id.tvThemeValue);
+        tvThemeValue.setText("light".equals(prefs.getString("theme_mode", "dark")) ? "浅色" : "深色");
+        findViewById(R.id.rlThemeSetting).setOnClickListener(v -> {
+            boolean toLight = !"light".equals(prefs.getString("theme_mode", "dark"));
+            prefs.edit().putString("theme_mode", toLight ? "light" : "dark").apply();
+            AppCompatDelegate.setDefaultNightMode(toLight
+                    ? AppCompatDelegate.MODE_NIGHT_NO
+                    : AppCompatDelegate.MODE_NIGHT_YES);
+            recreate();
+        });
         String d = prefs.getString(PREF_DECODER, "hardware");
         tvDecoderValue.setText("hardware".equals(d) ? "硬解" : "软解");
         rlDecoderSetting.setOnClickListener(v -> toggleDecoder());
@@ -2226,7 +2258,7 @@ public class HomeActivity extends AppCompatActivity {
         TextView header = new TextView(this);
         header.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         header.setText("直播频道");
-        header.setTextColor(0xFFEEEEEE);
+        header.setTextColor(c(R.color.text_primary));
         header.setTextSize(18);
         header.setTypeface(Typeface.DEFAULT_BOLD);
         headerRow.addView(header);
@@ -2235,15 +2267,15 @@ public class HomeActivity extends AppCompatActivity {
         viewAll.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 68));
         viewAll.setBackgroundResource(R.drawable.bg_input);
         viewAll.setText("查看全部 ›");
-        viewAll.setTextColor(0xFFB0B0B0);
+        viewAll.setTextColor(c(R.color.text_secondary));
         viewAll.setTextSize(14);
         viewAll.setFocusable(true);
         viewAll.setId(View.generateViewId());
         viewAll.setPadding(24, 0, 24, 0);
         viewAll.setOnClickListener(v -> browseLiveChannels());
         viewAll.setOnFocusChangeListener((v, hasFocus) -> {
-            viewAll.setTextColor(hasFocus ? 0xFF81C784 : 0xFFB0B0B0);
-            viewAll.setBackgroundColor(hasFocus ? 0x44FFFFFF : 0x00000000);
+            viewAll.setTextColor(hasFocus ? 0xFF81C784 : c(R.color.text_secondary));
+            viewAll.setBackgroundColor(hasFocus ? c(R.color.bg_chip_focus) : c(R.color.transparent));
         });
         headerRow.addView(viewAll);
         section.addView(headerRow);
@@ -2282,6 +2314,7 @@ public class HomeActivity extends AppCompatActivity {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setBackgroundResource(R.drawable.bg_media_card);
+        focusScale(card);
         card.setPadding(6, 6, 6, 6);
         card.setFocusable(true);
 
@@ -2300,7 +2333,7 @@ public class HomeActivity extends AppCompatActivity {
                 ViewGroup.LayoutParams.MATCH_PARENT, 280));
         channelBadge.setGravity(Gravity.CENTER);
         channelBadge.setText(shortName);
-        channelBadge.setTextColor(0xFFFFFFFF);
+        channelBadge.setTextColor(c(R.color.text_white));
         int len = shortName.length();
         channelBadge.setTextSize(len <= 2 ? 56 : len <= 4 ? 40 : len <= 6 ? 30 : 22);
         channelBadge.setTypeface(Typeface.DEFAULT_BOLD);
@@ -2317,7 +2350,7 @@ public class HomeActivity extends AppCompatActivity {
 
         TextView tag = new TextView(this);
         tag.setTextSize(9);
-        tag.setTextColor(0xFF78909C);
+        tag.setTextColor(c(R.color.text_hint));
         tag.setText("直播");
         textBar.addView(tag);
 
@@ -2326,7 +2359,7 @@ public class HomeActivity extends AppCompatActivity {
         title.setEllipsize(TextUtils.TruncateAt.MARQUEE);
         title.setMarqueeRepeatLimit(-1);
         title.setTextSize(11);
-        title.setTextColor(0xFFEEEEEE);
+        title.setTextColor(c(R.color.text_primary));
         title.setText(item.title != null ? item.title : "未知");
         textBar.addView(title);
 
@@ -2371,7 +2404,7 @@ public class HomeActivity extends AppCompatActivity {
                             ViewGroup.LayoutParams.MATCH_PARENT, 120));
                     e.setGravity(Gravity.CENTER);
                     e.setText("暂无直播频道");
-                    e.setTextColor(0xFF808080);
+                    e.setTextColor(c(R.color.text_hint));
                     e.setTextSize(14);
                     moviesContainer.addView(e);
                     return;
@@ -2398,7 +2431,7 @@ public class HomeActivity extends AppCompatActivity {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         h.setPadding(6, 8, 6, 4);
         h.setText("直播频道  (" + total + "项)");
-        h.setTextColor(0xFFEEEEEE);
+        h.setTextColor(c(R.color.text_primary));
         h.setTextSize(14);
         moviesContainer.addView(h);
 
