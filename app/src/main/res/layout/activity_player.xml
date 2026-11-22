@@ -59,7 +59,7 @@
         <TextView android:id="@+id/tvDanmuMatch"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
-            android:layout_alignParentRight="true"
+            android:layout_toLeftOf="@+id/topActions"
             android:layout_marginRight="@dimen/tv_gap_sm"
             android:gravity="center_vertical"
             android:maxWidth="200dp"
@@ -77,7 +77,7 @@
         <Button android:id="@+id/btnCloudMode"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
-            android:layout_alignParentRight="true"
+            android:layout_toLeftOf="@+id/topActions"
             android:background="@drawable/bg_control_btn"
             android:text="直链"
             android:textColor="#81C784"
@@ -89,6 +89,54 @@
             android:nextFocusUp="@+id/btnLock"
             android:nextFocusDown="@+id/btnBack"
             android:visibility="gone" />
+
+        <LinearLayout
+            android:id="@+id/topActions"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:layout_alignParentRight="true"
+            android:layout_centerVertical="true"
+            android:layout_marginRight="@dimen/tv_gap_sm"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <Button android:id="@+id/btnTopPrev"
+                android:layout_width="40dp" android:layout_height="40dp"
+                android:background="@drawable/bg_control_btn"
+                android:text="◀" android:textColor="@color/text_primary"
+                android:textSize="@dimen/tv_text_caption"
+                android:minWidth="0dp" android:minHeight="0dp"
+                android:focusable="true"
+                android:nextFocusDown="@+id/seekBar" />
+
+            <Button android:id="@+id/btnTopNext"
+                android:layout_width="40dp" android:layout_height="40dp"
+                android:background="@drawable/bg_control_btn"
+                android:text="▶" android:textColor="@color/text_primary"
+                android:textSize="@dimen/tv_text_caption"
+                android:minWidth="0dp" android:minHeight="0dp"
+                android:focusable="true"
+                android:nextFocusDown="@+id/seekBar" />
+
+            <Button android:id="@+id/btnTopSubtitle"
+                android:layout_width="40dp" android:layout_height="40dp"
+                android:background="@drawable/bg_control_btn"
+                android:text="✉" android:textColor="@color/text_primary"
+                android:textSize="@dimen/tv_text_caption"
+                android:minWidth="0dp" android:minHeight="0dp"
+                android:focusable="true"
+                android:nextFocusDown="@+id/seekBar" />
+
+            <Button android:id="@+id/btnTopMore"
+                android:layout_width="40dp" android:layout_height="40dp"
+                android:background="@drawable/bg_control_btn"
+                android:text="⚙" android:textColor="@color/text_primary"
+                android:textSize="@dimen/tv_text_caption"
+                android:minWidth="0dp" android:minHeight="0dp"
+                android:focusable="true"
+                android:nextFocusDown="@+id/seekBar" />
+
+        </LinearLayout>
     </RelativeLayout>
 
     <!-- 弹幕层（视频上方，控件下方） -->
@@ -212,10 +260,24 @@
                 android:textSize="@dimen/tv_text_caption" />
         </RelativeLayout>
 
-        <!-- 控制按钮：左边播放控制，右边信息按钮 -->
+        <TextView
+            android:id="@+id/tvMoreEntry"
+            android:layout_width="match_parent"
+            android:layout_height="36dp"
+            android:gravity="center"
+            android:text="详情 · 选集 · 字幕样式"
+            android:textColor="@color/text_secondary"
+            android:textSize="@dimen/tv_text_caption"
+            android:focusable="true"
+            android:nextFocusUp="@+id/seekBar"
+            android:nextFocusDown="@+id/controllerBtnRow" />
+
+        <!-- 控制按钮：抽屉式显示，由下方文字入口打开 -->
         <LinearLayout
+            android:id="@+id/controllerBtnRow"
             android:layout_width="match_parent"
             android:layout_height="72dp"
+            android:visibility="gone"
             android:gravity="center_vertical"
             android:orientation="horizontal"
             android:paddingBottom="6dp"

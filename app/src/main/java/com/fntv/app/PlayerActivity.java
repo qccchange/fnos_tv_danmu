@@ -460,6 +460,49 @@ public class PlayerActivity extends AppCompatActivity {
                 if (subtitleStyleManager != null) subtitleStyleManager.showSettings();
             });
         }
+
+        // ===== MainFrame 极简控制：顶部圆形操作 + 底部文字抽屉入口 =====
+        final View btnRow = findViewById(R.id.controllerBtnRow);
+        TextView tvMoreEntry = findViewById(R.id.tvMoreEntry);
+        if (tvMoreEntry != null) {
+            tvMoreEntry.setClickable(true);
+            Runnable openDrawer = () -> {
+                if (btnRow != null && btnRow.getVisibility() != View.VISIBLE) {
+                    btnRow.setVisibility(View.VISIBLE);
+                    btnRow.post(() -> {
+                        View first = btnRow.findViewById(R.id.btnPlayPause);
+                        if (first != null) first.requestFocus();
+                    });
+                }
+            };
+            tvMoreEntry.setOnClickListener(v -> openDrawer.run());
+            tvMoreEntry.setOnFocusChangeListener((v, hasFocus) -> {
+                if (hasFocus) openDrawer.run();
+            });
+        }
+        View topPrev = findViewById(R.id.btnTopPrev);
+        View topNext = findViewById(R.id.btnTopNext);
+        View topSubtitle = findViewById(R.id.btnTopSubtitle);
+        View topMore = findViewById(R.id.btnTopMore);
+        if (topPrev != null) topPrev.setOnClickListener(v -> {
+            if (btnEpisodeList.getVisibility() == View.VISIBLE) btnEpisodeList.performClick();
+            else Toast.makeText(this, "当前影片无选集", Toast.LENGTH_SHORT).show();
+        });
+        if (topNext != null) topNext.setOnClickListener(v -> {
+            if (btnNextEp.getVisibility() == View.VISIBLE) btnNextEp.performClick();
+            else Toast.makeText(this, "没有下一集", Toast.LENGTH_SHORT).show();
+        });
+        if (topSubtitle != null) topSubtitle.setOnClickListener(v -> {
+            View style = findViewById(R.id.btnSubtitleStyle);
+            if (style != null) style.performClick();
+            else cloudStreamManager.showSubtitleTrackDialog(PlayerActivity.this);
+        });
+        if (topMore != null) topMore.setOnClickListener(v -> btnInfo.performClick());
+        // 顶部操作横向焦点链
+        if (topPrev != null && topNext != null) topPrev.setNextFocusRightId(topNext.getId());
+        if (topNext != null && topSubtitle != null) topNext.setNextFocusRightId(topSubtitle.getId());
+        if (topSubtitle != null && topMore != null) topSubtitle.setNextFocusRightId(topMore.getId());
+        if (topMore != null && topSubtitle != null) topMore.setNextFocusLeftId(topSubtitle.getId());
         if (btnHdrToggle != null) {
             btnHdrToggle.setOnClickListener(v -> toggleHdr());
             updateHdrButtonText();
