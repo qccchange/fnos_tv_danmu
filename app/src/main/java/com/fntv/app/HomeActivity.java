@@ -69,6 +69,11 @@ public class HomeActivity extends AppCompatActivity {
     private String lastFocusedTag;
     private boolean focusRestorePending;
     private final java.util.Map<String, View> focusViews = new java.util.HashMap<>();
+    private java.util.List<PlayListItem> carouselItems;
+    private int carouselIndex = 0;
+    private ImageView carouselBg;
+    private TextView carouselTitle, carouselMeta;
+    private LinearLayout carouselDots;
 
     // 横竖屏切换时保存的页面状态
     private String savedBrowseGuid, savedBrowseTitle;
@@ -295,7 +300,15 @@ public class HomeActivity extends AppCompatActivity {
         overviewBuilt = true;
         focusRestorePending = lastFocusedTag != null;
 
-        // 继续观看（最顶部，占位，稍后由 loadContinueWatching 填充）
+        // 首页顶部 FeaturedCarousel（占位，稍后由 loadContinueWatching 填充）
+        FrameLayout carouselBox = new FrameLayout(this);
+        carouselBox.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(220)));
+        carouselBox.setTag("featured_carousel");
+        carouselBox.setBackgroundResource(R.drawable.bg_card);
+        moviesContainer.addView(carouselBox);
+
+        // 继续观看（占位，稍后由 loadContinueWatching 填充）
         LinearLayout continueWatchingBox = new LinearLayout(this);
         continueWatchingBox.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -578,6 +591,145 @@ public class HomeActivity extends AppCompatActivity {
         return card;
     }
 
+    /** 首页顶部 FeaturedCarousel：左右键切换，Enter 播放 */
+    private void buildCarousel(java.util.List<PlayListItem> items) {
+        View box = null;
+        for (int i = 0; i < moviesContainer.getChildCount(); i++) {
+            View v = moviesContainer.getChildAt(i);
+            if ("featured_carousel".equals(v.getTag())) { box = v; break; }
+        }
+        if (!(box instanceof FrameLayout) || items == null || items.isEmpty()) return;
+        final FrameLayout root = (FrameLayout) box;
+        root.removeAllViews();
+        carouselItems = new java.util.ArrayList<>(items.subList(0, Math.min(5, items.size())));
+        carouselIndex = 0;
+
+        carouselBg = new ImageView(this);
+        carouselBg.setLayoutParams(new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        carouselBg.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        carouselBg.setBackgroundColor(c(R.color.bg_card));
+        root.addView(carouselBg);
+
+        View scrim = new View(this);
+        scrim.setLayoutParams(new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        android.graphics.drawable.GradientDrawable gd =
+                new android.graphics.drawable.GradientDrawable(
+                        android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
+                        new int[]{0x00000000, 0x77000000, c(R.color.bg_dark)});
+        scrim.setBackgroundDrawable(gd);
+        root.addView(scrim);
+
+        LinearLayout bottom = new LinearLayout(this);
+        bottom.setOrientation(LinearLayout.VERTICAL);
+        bottom.setGravity(Gravity.BOTTOM | Gravity.START);
+        bottom.setPadding(dp(24), 0, dp(24), dp(22));
+        bottom.setLayoutParams(new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT,
+                Gravity.BOTTOM));
+
+        carouselTitle = new TextView(this);
+        carouselTitle.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_display_small));
+        carouselTitle.setTextColor(c(R.color.text_white));
+        carouselTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        carouselTitle.setMaxLines(1);
+        carouselTitle.setEllipsize(TextUtils.TruncateAt.END);
+        carouselTitle.setShadowLayer(6, 0, 2, 0x99000000);
+        bottom.addView(carouselTitle);
+
+        carouselMeta = new TextView(this);
+        carouselMeta.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_caption));
+        carouselMeta.setTextColor(c(R.color.text_secondary));
+        carouselMeta.setPadding(0, dp(4), 0, 0);
+        bottom.addView(carouselMeta);
+
+        Button play = new Button(this);
+        play.setText("▶  播放");
+        play.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_body));
+        play.setTextColor(0xFF121418);
+        play.setBackgroundResource(R.drawable.bg_play_white);
+        play.setFocusable(true);
+        play.setMinWidth(0); play.setMinHeight(0);
+        LinearLayout.LayoutParams playLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, dp(40));
+        playLp.setMargins(0, dp(10), 0, 0);
+        play.setLayoutParams(playLp);
+        bottom.addView(play);
+        play.setOnClickListener(v -> {
+            if (carouselItems != null && !carouselItems.isEmpty()) {
+                PlayListItem it = carouselItems.get(carouselIndex);
+                launchPlayer(it.guid, it.title, it.tvTitle != null ? it.tvTitle : "",
+                        it.episodeNumber, it.poster, it.getCategoryLabel(),
+                        it.ts, it.duration, it.parentGuid);
+            }
+        });
+
+        root.addView(bottom);
+
+        carouselDots = new LinearLayout(this);
+        carouselDots.setOrientation(LinearLayout.HORIZONTAL);
+        carouselDots.setGravity(Gravity.END);
+        FrameLayout.LayoutParams dl = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.BOTTOM | Gravity.END);
+        dl.setMargins(0, 0, dp(20), dp(22));
+        carouselDots.setLayoutParams(dl);
+        for (int i = 0; i < carouselItems.size(); i++) {
+            View dot = new View(this);
+            android.graphics.drawable.GradientDrawable dd =
+                    new android.graphics.drawable.GradientDrawable();
+            dd.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+            dd.setColor(0xFFFFFFFF);
+            dot.setBackgroundDrawable(dd);
+            carouselDots.addView(dot, new LinearLayout.LayoutParams(dp(6), dp(6)));
+        }
+        root.addView(carouselDots);
+
+        root.setFocusable(true);
+        root.setOnKeyListener((v, keyCode, event) -> {
+            if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
+            if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) { shiftCarousel(-1); return true; }
+            if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) { shiftCarousel(1); return true; }
+            if (keyCode == KeyEvent.KEYCODE_ENTER || keyCode == KeyEvent.KEYCODE_DPAD_CENTER) {
+                play.performClick();
+                return true;
+            }
+            return false;
+        });
+
+        updateCarousel(0);
+    }
+
+    private void shiftCarousel(int delta) {
+        if (carouselItems == null || carouselItems.isEmpty()) return;
+        int next = (carouselIndex + delta + carouselItems.size()) % carouselItems.size();
+        updateCarousel(next);
+    }
+
+    private void updateCarousel(int index) {
+        if (carouselItems == null || carouselItems.isEmpty()) return;
+        carouselIndex = Math.max(0, Math.min(index, carouselItems.size() - 1));
+        PlayListItem item = carouselItems.get(carouselIndex);
+        carouselTitle.setText(item.title != null ? item.title : "");
+        String vote = voteLabel(item);
+        carouselMeta.setText((vote != null ? "★ " + vote + "　" : "") + item.getCategoryLabel());
+        String url = makePosterUrl(item.poster);
+        if (url != null && carouselBg != null) {
+            carouselBg.setTag(url);
+            SimpleImageLoader.load(url, carouselBg, apiManager.getClient());
+        }
+        if (carouselDots != null) {
+            for (int i = 0; i < carouselDots.getChildCount(); i++) {
+                View d = carouselDots.getChildAt(i);
+                LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) d.getLayoutParams();
+                lp.width = i == carouselIndex ? dp(16) : dp(6);
+                d.setLayoutParams(lp);
+                d.setAlpha(i == carouselIndex ? 1f : 0.45f);
+            }
+        }
+    }
+
     private void loadContinueWatching() {
         apiManager.getApi().getPlayList().enqueue(new Callback<ApiResponse<List<PlayListItem>>>() {
             @Override
@@ -606,6 +758,7 @@ public class HomeActivity extends AppCompatActivity {
                             }
                         }
                         addContinueWatchingApi((LinearLayout) v, response.body().data, fva);
+                        buildCarousel(response.body().data);
                         break;
                     }
                 }
