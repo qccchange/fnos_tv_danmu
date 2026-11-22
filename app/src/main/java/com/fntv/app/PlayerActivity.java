@@ -58,6 +58,7 @@ public class PlayerActivity extends AppCompatActivity {
     private final java.util.List<Button> tabButtons = new java.util.ArrayList<>();
     private final java.util.Map<Integer, Integer> originalVisibility = new java.util.HashMap<>();
     private final java.util.Map<Integer, Integer> naturalVisibility = new java.util.HashMap<>();
+    private final java.util.Map<Integer, View> panelViews = new java.util.HashMap<>();
     private boolean filteringPanel;
 
     private Handler handler = new Handler(Looper.getMainLooper());
@@ -1335,6 +1336,14 @@ public class PlayerActivity extends AppCompatActivity {
         View play = findViewById(R.id.btnPlayPause);
         View rew = findViewById(R.id.btnRewind);
         View fwd = findViewById(R.id.btnForward);
+        int[] secondaryIds = {R.id.btnSpeed, R.id.btnRatio, R.id.btnEpisodeList,
+                R.id.btnNextEp, R.id.btnSkip, R.id.btnInfo, R.id.btnQuality,
+                R.id.btnBrightness, R.id.btnAudioTrack, R.id.btnSubtitleTrack,
+                R.id.btnSubtitleStyle, R.id.btnHdrToggle};
+        for (int id : secondaryIds) {
+            View v = findViewById(id);
+            if (v != null) panelViews.put(id, v);
+        }
         row.removeAllViews();
 
         LinearLayout primary = new LinearLayout(this);
@@ -1392,12 +1401,9 @@ public class PlayerActivity extends AppCompatActivity {
         int rowIndex = ctrl.indexOfChild(row);
         ctrl.addView(settingsPanel, rowIndex);
 
-        int[] secondary = {R.id.btnSpeed, R.id.btnRatio, R.id.btnEpisodeList,
-                R.id.btnNextEp, R.id.btnSkip, R.id.btnInfo, R.id.btnQuality,
-                R.id.btnBrightness, R.id.btnAudioTrack, R.id.btnSubtitleTrack,
-                R.id.btnSubtitleStyle, R.id.btnHdrToggle};
-        for (int id : secondary) {
-            View v = findViewById(id);
+        for (java.util.Map.Entry<Integer, View> entry : panelViews.entrySet()) {
+            int id = entry.getKey();
+            View v = entry.getValue();
             if (v == null) continue;
             originalVisibility.put(id, v.getVisibility());
             naturalVisibility.put(id, v.getVisibility());
@@ -1461,7 +1467,7 @@ public class PlayerActivity extends AppCompatActivity {
                 R.id.btnEpisodeList, R.id.btnNextEp, R.id.btnQuality, R.id.btnBrightness));
         for (java.util.Map.Entry<Integer, Integer> e : originalVisibility.entrySet()) {
             if (dynamic.contains(e.getKey())) continue; // 动态显隐交给业务代码，不强制覆盖
-            View v = findViewById(e.getKey());
+            View v = panelViews.get(e.getKey());
             if (v == null) continue;
             Integer natural = naturalVisibility.get(e.getKey());
             v.setVisibility(allowed.contains(e.getKey())
