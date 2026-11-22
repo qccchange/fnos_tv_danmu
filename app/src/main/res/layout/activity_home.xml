@@ -265,7 +265,69 @@ DPAD 遥控器友好
                             android:layout_alignParentRight="true"
                             android:layout_centerVertical="true"
                             android:text="深色"
-                            android:textColor="@color/colorAccent"
+                            android:textColor="?attr/colorAccent"
+                            android:textSize="@dimen/tv_text_body" />
+
+                    </RelativeLayout>
+
+                    <!-- 字体缩放（TV 主流 0.9x ~ 1.5x） -->
+                    <RelativeLayout
+                        android:id="@+id/rlFontSize"
+                        android:layout_width="match_parent"
+                        android:layout_height="@dimen/tv_setting_row_h"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/bg_setting_card"
+                        android:focusable="true"
+                        android:paddingLeft="12dp"
+                        android:paddingRight="12dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_centerVertical="true"
+                            android:text="字体大小"
+                            android:textColor="@color/text_primary"
+                            android:textSize="@dimen/tv_text_body" />
+
+                        <TextView
+                            android:id="@+id/tvFontSizeValue"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_alignParentRight="true"
+                            android:layout_centerVertical="true"
+                            android:text="1.0x"
+                            android:textColor="?attr/colorAccent"
+                            android:textSize="@dimen/tv_text_body" />
+
+                    </RelativeLayout>
+
+                    <!-- 主题种子色 -->
+                    <RelativeLayout
+                        android:id="@+id/rlSeedColor"
+                        android:layout_width="match_parent"
+                        android:layout_height="@dimen/tv_setting_row_h"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/bg_setting_card"
+                        android:focusable="true"
+                        android:paddingLeft="12dp"
+                        android:paddingRight="12dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_centerVertical="true"
+                            android:text="强调色"
+                            android:textColor="@color/text_primary"
+                            android:textSize="@dimen/tv_text_body" />
+
+                        <TextView
+                            android:id="@+id/tvSeedValue"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_alignParentRight="true"
+                            android:layout_centerVertical="true"
+                            android:text="绿色"
+                            android:textColor="?attr/colorAccent"
                             android:textSize="@dimen/tv_text_body" />
 
                     </RelativeLayout>
@@ -361,7 +423,7 @@ DPAD 遥控器友好
                                 android:layout_alignParentRight="true"
                                 android:layout_centerVertical="true"
                                 android:text="硬解"
-                                android:textColor="@color/colorAccent"
+                                android:textColor="?attr/colorAccent"
                                 android:textSize="@dimen/tv_text_body" />
 
                         </RelativeLayout>
@@ -392,7 +454,7 @@ DPAD 遥控器友好
                                 android:layout_alignParentRight="true"
                                 android:layout_centerVertical="true"
                                 android:text="10s"
-                                android:textColor="@color/colorAccent"
+                                android:textColor="?attr/colorAccent"
                                 android:textSize="@dimen/tv_text_body" />
 
                         </RelativeLayout>
@@ -423,7 +485,7 @@ DPAD 遥控器友好
                                 android:layout_alignParentRight="true"
                                 android:layout_centerVertical="true"
                                 android:text="30s"
-                                android:textColor="@color/colorAccent"
+                                android:textColor="?attr/colorAccent"
                                 android:textSize="@dimen/tv_text_body" />
 
                         </RelativeLayout>
@@ -454,7 +516,7 @@ DPAD 遥控器友好
                                 android:layout_alignParentRight="true"
                                 android:layout_centerVertical="true"
                                 android:text=""
-                                android:textColor="@color/colorAccent"
+                                android:textColor="?attr/colorAccent"
                                 android:textSize="@dimen/tv_text_caption"
                                 android:maxWidth="160dp"
                                 android:singleLine="true"

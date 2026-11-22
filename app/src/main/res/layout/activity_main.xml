@@ -77,7 +77,7 @@
                 android:paddingLeft="12dp"
                 android:paddingRight="12dp"
                 android:textColor="@color/text_primary"
-                android:textColorHighlight="@color/colorAccent"
+                android:textColorHighlight="?attr/colorAccent"
                 android:textSize="15sp" />
 
             <!-- 用户名 -->
@@ -105,7 +105,7 @@
                 android:paddingLeft="12dp"
                 android:paddingRight="12dp"
                 android:textColor="@color/text_primary"
-                android:textColorHighlight="@color/colorAccent"
+                android:textColorHighlight="?attr/colorAccent"
                 android:textSize="15sp" />
 
             <!-- 密码 -->
@@ -133,7 +133,7 @@
                 android:paddingLeft="12dp"
                 android:paddingRight="12dp"
                 android:textColor="@color/text_primary"
-                android:textColorHighlight="@color/colorAccent"
+                android:textColorHighlight="?attr/colorAccent"
                 android:textSize="15sp" />
 
             <!-- 记住密码 -->
@@ -153,7 +153,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_centerVertical="true"
-                    app:buttonTint="@color/colorAccent"
+                    app:buttonTint="?attr/colorAccent"
                     android:focusable="false"
                     android:text="记住密码"
                     android:textColor="@color/text_primary"

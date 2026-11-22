@@ -66,6 +66,7 @@ public class HomeActivity extends AppCompatActivity {
     private long t0;
     private boolean overviewBuilt = false;
     private long backPressedTime = 0;
+    private float fontScale = 1f;
     private String lastFocusedTag;
     private boolean focusRestorePending;
     private final java.util.Map<String, View> focusViews = new java.util.HashMap<>();
@@ -106,6 +107,7 @@ public class HomeActivity extends AppCompatActivity {
     @Override
 
     protected void onCreate(Bundle savedInstanceState) {
+        FntvApplication.applyTheme(this);
         t0 = System.currentTimeMillis();
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
@@ -116,6 +118,7 @@ public class HomeActivity extends AppCompatActivity {
         }
 
         prefs = getSharedPreferences("fntv_prefs", MODE_PRIVATE);
+        fontScale = prefs.getFloat("font_scale", 1f);
         apiManager = FnApiManager.getInstance();
         baseUrl = prefs.getString("host", "").replaceAll("/+$", "");
         if (apiManager.getApi() == null && !baseUrl.isEmpty()) {
@@ -1405,7 +1408,7 @@ public class HomeActivity extends AppCompatActivity {
             TextView heroTitle = new TextView(this);
             heroTitle.setText(detailTitle(item, info, epTitle, series, epNum));
             heroTitle.setTextColor(c(R.color.text_white));
-            heroTitle.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_display_small));
+            heroTitle.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_display_medium));
             heroTitle.setTypeface(Typeface.DEFAULT_BOLD);
             heroTitle.setMaxLines(2);
             heroTitle.setEllipsize(TextUtils.TruncateAt.END);
@@ -1468,6 +1471,27 @@ public class HomeActivity extends AppCompatActivity {
                 });
                 actions.addView(b);
             }
+            // 本地收藏（不写服务器，明确提示）
+            final String favKey = "fav_" + item.guid;
+            Button fav = new Button(this);
+            fav.setText(prefs.getBoolean(favKey, false) ? "♥" : "♡");
+            fav.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_caption));
+            fav.setTextColor(c(R.color.text_primary));
+            fav.setBackgroundResource(R.drawable.bg_circle);
+            fav.setFocusable(true);
+            fav.setMinWidth(0); fav.setMinHeight(0);
+            LinearLayout.LayoutParams favLp = new LinearLayout.LayoutParams(dp(64), dp(64));
+            favLp.setMargins(dp(8), 0, 0, 0);
+            fav.setLayoutParams(favLp);
+            fav.setOnClickListener(v -> {
+                boolean now = !prefs.getBoolean(favKey, false);
+                prefs.edit().putBoolean(favKey, now).apply();
+                fav.setText(now ? "♥" : "♡");
+                Toast.makeText(this, now ? "已加入本地收藏（不同步服务器）" : "已取消本地收藏",
+                        Toast.LENGTH_SHORT).show();
+            });
+            actions.addView(fav);
+
             hero.addView(actions);
 
             content.addView(hero);
@@ -1683,7 +1707,7 @@ public class HomeActivity extends AppCompatActivity {
         playFrame.setMinimumHeight(dp(56));
 
         // 圆角背景（进度条用两层：蓝色 + 灰色）
-        if (progressPct > 0) {
+        if (!heroMode && progressPct > 0) {
             LinearLayout progressLayer = new LinearLayout(this);
             progressLayer.setLayoutParams(new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -1712,7 +1736,7 @@ public class HomeActivity extends AppCompatActivity {
 
             playFrame.addView(progressLayer);
         } else {
-            playFrame.setBackgroundResource(R.drawable.bg_play_pill);
+            playFrame.setBackgroundResource(heroMode ? R.drawable.bg_play_white : R.drawable.bg_play_pill);
         }
 
         // 按钮本身（透明背景）
@@ -1722,7 +1746,7 @@ public class HomeActivity extends AppCompatActivity {
         playBtn.setBackgroundDrawable(null);
         playBtn.setFocusable(true);
         playBtn.setGravity(Gravity.CENTER);
-        playBtn.setTextColor(c(R.color.text_white));
+        playBtn.setTextColor(heroMode ? 0xFF121418 : c(R.color.text_white));
         playBtn.setOnFocusChangeListener((v, hasFocus) -> {
             if (hasFocus) {
                 playBtn.setBackgroundColor(c(R.color.bg_chip_focus));
@@ -2276,7 +2300,7 @@ public class HomeActivity extends AppCompatActivity {
 
     /** 设计令牌尺寸（px），用于 TextView.setTextSize(COMPLEX_UNIT_PX, ...) */
     private float dimen(int res) {
-        return getResources().getDimension(res);
+        return getResources().getDimension(res) * fontScale;
     }
 
     /** dp -> px */
@@ -2324,6 +2348,36 @@ public class HomeActivity extends AppCompatActivity {
             AppCompatDelegate.setDefaultNightMode(toLight
                     ? AppCompatDelegate.MODE_NIGHT_NO
                     : AppCompatDelegate.MODE_NIGHT_YES);
+            recreate();
+        });
+
+        // 字体缩放：主流 TV 提供 0.9x ~ 1.5x 五档
+        final float[] fontScales = {0.9f, 1.0f, 1.1f, 1.2f, 1.5f};
+        TextView tvFontSizeValue = findViewById(R.id.tvFontSizeValue);
+        final float currentScale = prefs.getFloat("font_scale", 1f);
+        tvFontSizeValue.setText(String.format("%.1fx", currentScale));
+        findViewById(R.id.rlFontSize).setOnClickListener(v -> {
+            int idx = 0;
+            for (int i = 0; i < fontScales.length; i++) {
+                if (Math.abs(fontScales[i] - currentScale) < 0.01f) { idx = i; break; }
+            }
+            float next = fontScales[(idx + 1) % fontScales.length];
+            prefs.edit().putFloat("font_scale", next).apply();
+            recreate();
+        });
+
+        // 强调色（种子色）
+        final String[] seeds = {"green", "purple", "blue", "red", "yellow"};
+        final String[] seedNames = {"绿色", "紫色", "蓝色", "红色", "黄色"};
+        TextView tvSeedValue = findViewById(R.id.tvSeedValue);
+        String curSeed = prefs.getString("theme_seed", "green");
+        int seedIdx = 0;
+        for (int i = 0; i < seeds.length; i++) if (seeds[i].equals(curSeed)) { seedIdx = i; break; }
+        final int currentSeedIdx = seedIdx;
+        tvSeedValue.setText(seedNames[currentSeedIdx]);
+        findViewById(R.id.rlSeedColor).setOnClickListener(v -> {
+            int next = (currentSeedIdx + 1) % seeds.length;
+            prefs.edit().putString("theme_seed", seeds[next]).apply();
             recreate();
         });
         String d = prefs.getString(PREF_DECODER, "hardware");

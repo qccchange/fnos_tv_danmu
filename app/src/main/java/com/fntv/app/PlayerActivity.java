@@ -52,6 +52,7 @@ public class PlayerActivity extends AppCompatActivity {
     private SubtitleMergeOverlay subtitleMerge;
     private SubtitleStyleManager subtitleStyleManager;
     private DefaultTrackSelector trackSelector;
+    private float fontScale = 1f;
 
     private Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable infoRefreshR = new Runnable() {
@@ -91,7 +92,7 @@ public class PlayerActivity extends AppCompatActivity {
     }
 
     private float dimen(int res) {
-        return getResources().getDimension(res);
+        return getResources().getDimension(res) * fontScale;
     }
 
 
@@ -115,6 +116,7 @@ public class PlayerActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        FntvApplication.applyTheme(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_player);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -124,6 +126,7 @@ public class PlayerActivity extends AppCompatActivity {
 
         apiManager = FnApiManager.getInstance();
         SharedPreferences prefs = getSharedPreferences("fntv_prefs", MODE_PRIVATE);
+        fontScale = prefs.getFloat("font_scale", 1f);
         baseUrl = prefs.getString("host", "").replaceAll("/+$", "");
         isHwDecode = "hardware".equals(prefs.getString("decoder_mode", "hardware"));
 
