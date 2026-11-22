@@ -1111,6 +1111,27 @@ public class HomeActivity extends AppCompatActivity {
         });
     }
 
+    /** 评分文本（0~10 分，保留一位小数） */
+    private String voteLabel(PlayListItem item) {
+        String v = item != null ? item.voteAverage : null;
+        if (v == null || v.isEmpty() || "0".equals(v) || "0.0".equals(v)) return null;
+        try {
+            float f = Float.parseFloat(v);
+            return f > 0 && f <= 10 ? String.format("%.1f", f) : v;
+        } catch (NumberFormatException e) {
+            return v;
+        }
+    }
+
+    /** 详情页大标题 */
+    private String detailTitle(PlayListItem item, PlayInfoResponse info, String epTitle, String series, int epNum) {
+        String t = epTitle != null ? epTitle : "";
+        if (series != null && !series.isEmpty() && !series.equals(epTitle)) {
+            t = series + (epNum > 0 ? " " + epNum + "集" : "") + (epTitle != null ? " " + epTitle : "");
+        }
+        return t.trim();
+    }
+
     /** 构建详情页（自动适应横竖屏） */
 
     private void buildDetailPage(PlayListItem item, PlayInfoResponse info) {
@@ -1133,48 +1154,145 @@ public class HomeActivity extends AppCompatActivity {
         String pUrl = makePosterUrl(posterPath);
 
         if (isLandscape) {
-            // ====== 横屏：左图右信息 ======
+            // ====== 横屏：Hero 全幅背景 + 渐变遮罩（设计语言升级，信息项不变） ======
             int screenH = getResources().getDisplayMetrics().heightPixels;
-            // 减去状态栏高度
             int sbId = getResources().getIdentifier("status_bar_height", "dimen", "android");
             if (sbId > 0) screenH -= getResources().getDimensionPixelSize(sbId);
-            // 减去导航栏高度（手机底部虚拟键）
             int nbId = getResources().getIdentifier("navigation_bar_height", "dimen", "android");
             if (nbId > 0) screenH -= getResources().getDimensionPixelSize(nbId);
-            // 减去底部菜单栏（tabBar 52dp + divider 1dp）
-            screenH -= (int)(53 * getResources().getDisplayMetrics().density);
-            LinearLayout rootRow = new LinearLayout(this);
-            rootRow.setOrientation(LinearLayout.HORIZONTAL);
-            rootRow.setLayoutParams(new LinearLayout.LayoutParams(
+            screenH -= dp(53); // 底部 TabBar
+
+            final androidx.core.widget.NestedScrollView scroll =
+                    new androidx.core.widget.NestedScrollView(this);
+            scroll.setLayoutParams(new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            LinearLayout content = new LinearLayout(this);
+            content.setOrientation(LinearLayout.VERTICAL);
+            content.setPadding(0, 0, 0, dp(20));
 
-            // 左侧海报（用卡片同款竖图 9:16），圆角处理
-            String posterLand = makePosterUrl(item.poster);
-            RoundedImageView posterL = new RoundedImageView(this);
-            int posterW = screenH * 2 / 3;
-            posterL.setLayoutParams(new LinearLayout.LayoutParams(posterW, screenH));
-            posterL.setScaleType(ImageView.ScaleType.FIT_XY);
-            posterL.setBackgroundColor(c(R.color.bg_dark));
-            posterL.setCornerRadius(10);
-            if (posterLand != null) {
-                posterL.setTag(posterLand);
+            // Hero 容器
+            FrameLayout hero = new FrameLayout(this);
+            hero.setLayoutParams(new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, (int) (screenH * 0.34f)));
+
+            ImageView heroBg = new ImageView(this);
+            heroBg.setLayoutParams(new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            heroBg.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            heroBg.setBackgroundColor(c(R.color.bg_card));
+            if (pUrl != null) {
+                heroBg.setTag(pUrl);
                 new Handler(Looper.getMainLooper()).post(() ->
-                        SimpleImageLoader.load(posterLand, posterL, apiManager.getClient()));
+                        SimpleImageLoader.load(pUrl, heroBg, apiManager.getClient()));
             }
-            rootRow.addView(posterL);
+            hero.addView(heroBg);
 
-            // 右侧滚动内容
-            androidx.core.widget.NestedScrollView svL = new androidx.core.widget.NestedScrollView(this);
-            svL.setLayoutParams(new LinearLayout.LayoutParams(
-                    0, ViewGroup.LayoutParams.MATCH_PARENT, 1));
-            LinearLayout contentL = new LinearLayout(this);
-            contentL.setOrientation(LinearLayout.VERTICAL);
-            contentL.setPadding(16, 12, 16, 20);
-            buildDetailContent(contentL, item, info, epTitle, series, epNum, pUrl);
-            svL.addView(contentL);
-            rootRow.addView(svL);
+            // 渐变遮罩：顶部透明 → 底部背景色，保证文字可读
+            View scrim = new View(this);
+            scrim.setLayoutParams(new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            android.graphics.drawable.GradientDrawable scrimGd =
+                    new android.graphics.drawable.GradientDrawable(
+                            android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
+                            new int[]{0x00000000, 0x99000000, c(R.color.bg_dark)});
+            scrim.setBackgroundDrawable(scrimGd);
+            hero.addView(scrim);
 
-            moviesContainer.addView(rootRow);
+            // 左上角返回
+            Button backBtn = new Button(this);
+            backBtn.setText("← 返回");
+            backBtn.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_caption));
+            backBtn.setTextColor(c(R.color.text_white));
+            backBtn.setBackgroundResource(R.drawable.bg_chip);
+            backBtn.setFocusable(true);
+            FrameLayout.LayoutParams backLp = new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, dp(40), Gravity.TOP | Gravity.START);
+            backLp.setMargins(dp(24), dp(20), 0, 0);
+            backBtn.setLayoutParams(backLp);
+            backBtn.setOnClickListener(v -> loadOverview());
+            hero.addView(backBtn);
+
+            // 底部标题 + 短元信息 + 评分
+            LinearLayout heroText = new LinearLayout(this);
+            heroText.setOrientation(LinearLayout.VERTICAL);
+            heroText.setGravity(Gravity.BOTTOM | Gravity.START);
+            heroText.setPadding(dp(24), 0, dp(24), dp(22));
+            heroText.setLayoutParams(new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT,
+                    Gravity.BOTTOM));
+
+            TextView heroTitle = new TextView(this);
+            heroTitle.setText(detailTitle(item, info, epTitle, series, epNum));
+            heroTitle.setTextColor(c(R.color.text_white));
+            heroTitle.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_headline));
+            heroTitle.setTypeface(Typeface.DEFAULT_BOLD);
+            heroTitle.setMaxLines(2);
+            heroTitle.setEllipsize(TextUtils.TruncateAt.END);
+            heroTitle.setShadowLayer(6, 0, 2, 0x99000000);
+            heroText.addView(heroTitle);
+
+            LinearLayout heroMeta = new LinearLayout(this);
+            heroMeta.setOrientation(LinearLayout.HORIZONTAL);
+            heroMeta.setGravity(Gravity.CENTER_VERTICAL);
+            heroMeta.setPadding(0, dp(8), 0, 0);
+            String vote = voteLabel(item);
+            if (vote != null) {
+                TextView rating = new TextView(this);
+                rating.setText("★ " + vote);
+                rating.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_caption));
+                rating.setTextColor(0xFFFFD479);
+                rating.setBackgroundColor(0x99000000);
+                rating.setPadding(dp(8), dp(2), dp(8), dp(2));
+                heroMeta.addView(rating);
+            }
+            TextView shortMeta = new TextView(this);
+            String date = info.item != null && info.item.releaseDate != null
+                    ? info.item.releaseDate : (info.item != null ? info.item.airDate : null);
+            shortMeta.setText((date != null && !date.isEmpty() ? date + "  ·  " : "")
+                    + item.getCategoryLabel());
+            shortMeta.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_caption));
+            shortMeta.setTextColor(c(R.color.text_secondary));
+            shortMeta.setPadding(dp(10), 0, 0, 0);
+            heroMeta.addView(shortMeta);
+            heroText.addView(heroMeta);
+            hero.addView(heroText);
+
+            // 右下角圆形次要操作：跳到选集 / 跳到简介（均为真实跳转）
+            LinearLayout actions = new LinearLayout(this);
+            actions.setOrientation(LinearLayout.HORIZONTAL);
+            actions.setGravity(Gravity.END);
+            FrameLayout.LayoutParams actionsLp = new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
+                    Gravity.BOTTOM | Gravity.END);
+            actionsLp.setMargins(0, 0, dp(24), dp(22));
+            actions.setLayoutParams(actionsLp);
+            String[] actionLabels = {"选集", "简介"};
+            final String[] actionTags = {"episodes_section", "overview_section"};
+            for (int i = 0; i < actionLabels.length; i++) {
+                final String tag = actionTags[i];
+                Button b = new Button(this);
+                b.setText(actionLabels[i]);
+                b.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_caption));
+                b.setTextColor(c(R.color.text_primary));
+                b.setBackgroundResource(R.drawable.bg_circle);
+                b.setFocusable(true);
+                b.setMinWidth(0); b.setMinHeight(0);
+                b.setWidth(dp(64)); b.setHeight(dp(64));
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(64), dp(64));
+                lp.setMargins(dp(8), 0, 0, 0);
+                b.setLayoutParams(lp);
+                b.setOnClickListener(v -> {
+                    View target = content.findViewWithTag(tag);
+                    if (target != null) scroll.post(() -> scroll.smoothScrollTo(0, target.getTop() - dp(16)));
+                });
+                actions.addView(b);
+            }
+            hero.addView(actions);
+
+            content.addView(hero);
+            buildDetailContent(content, item, info, epTitle, series, epNum, pUrl, true);
+            scroll.addView(content);
+            moviesContainer.addView(scroll);
         } else {
             // ====== 竖屏：原布局 ======
             androidx.core.widget.NestedScrollView scrollView = new androidx.core.widget.NestedScrollView(this);
@@ -1200,7 +1318,7 @@ public class HomeActivity extends AppCompatActivity {
             }
             content.addView(makeSpacer(12));
 
-            buildDetailContent(content, item, info, epTitle, series, epNum, pUrl);
+            buildDetailContent(content, item, info, epTitle, series, epNum, pUrl, false);
 
             scrollView.addView(content);
             moviesContainer.addView(scrollView);
@@ -1209,7 +1327,8 @@ public class HomeActivity extends AppCompatActivity {
 
     /** 构建详情页的核心内容（元数据、播放按钮、剧集列表） */
     private void buildDetailContent(LinearLayout content, PlayListItem item, PlayInfoResponse info,
-                                     String epTitle, String series, int epNum, String pUrl) {
+                                     String epTitle, String series, int epNum, String pUrl,
+                                     boolean heroMode) {
         // 元数据卡片
         LinearLayout metaCard = new LinearLayout(this);
         metaCard.setLayoutParams(new LinearLayout.LayoutParams(
@@ -1238,19 +1357,18 @@ public class HomeActivity extends AppCompatActivity {
             } catch (NumberFormatException ignored) {}
         }
 
-        // 标题
-        String bigTitle = epTitle != null ? epTitle : "";
-        if (!series.isEmpty() && !series.equals(epTitle)) {
-            bigTitle = series + (epNum > 0 ? " " + epNum + "集" : "") + (epTitle != null ? " " + epTitle : "");
+        // 标题（Hero 模式下由顶部 Hero 区展示，这里不重复）
+        if (!heroMode) {
+            String bigTitle = detailTitle(item, info, epTitle, series, epNum);
+            TextView titleBig = new TextView(this);
+            titleBig.setLayoutParams(new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            titleBig.setText(bigTitle);
+            titleBig.setTextColor(c(R.color.text_primary));
+            titleBig.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_headline));
+            titleBig.setTypeface(Typeface.DEFAULT_BOLD);
+            metaCard.addView(titleBig);
         }
-        TextView titleBig = new TextView(this);
-        titleBig.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        titleBig.setText(bigTitle.trim());
-        titleBig.setTextColor(c(R.color.text_white));
-        titleBig.setTextSize(22);
-        titleBig.setTypeface(Typeface.DEFAULT_BOLD);
-        metaCard.addView(titleBig);
 
         // 元数据行
         TextView meta = new TextView(this);
@@ -1273,7 +1391,7 @@ public class HomeActivity extends AppCompatActivity {
             long durSec = info.item != null && info.item.duration > 0 ? info.item.duration : runtime * 60L;
             mt.append("  ·  ").append(formatDuration(durSec));
         }
-        if (voteLabel != null) mt.append("  ·  ⭐").append(voteLabel);
+        if (voteLabel != null && !heroMode) mt.append("  ·  ⭐").append(voteLabel);
         // 分辨率
         if (info.item != null && info.item.mediaStream != null
                 && info.item.mediaStream.resolutions != null
@@ -1308,6 +1426,7 @@ public class HomeActivity extends AppCompatActivity {
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
             overviewCard.setOrientation(LinearLayout.VERTICAL);
             overviewCard.setBackgroundResource(R.drawable.bg_card);
+            overviewCard.setTag("overview_section");
             overviewCard.setPadding(16, 16, 16, 16);
 
             TextView ovLabel = new TextView(this);
@@ -1318,7 +1437,7 @@ public class HomeActivity extends AppCompatActivity {
 
             androidx.core.widget.NestedScrollView ovScroll = new androidx.core.widget.NestedScrollView(this);
             ovScroll.setLayoutParams(new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, 300));
+                    ViewGroup.LayoutParams.MATCH_PARENT, heroMode ? dp(112) : 300));
             ovScroll.setFocusable(true);
             ovScroll.setDescendantFocusability(ViewGroup.FOCUS_BEFORE_DESCENDANTS);
             ovScroll.setOnFocusChangeListener((v, hasFocus) ->
@@ -1333,6 +1452,22 @@ public class HomeActivity extends AppCompatActivity {
             ov.setLineSpacing(6, 1);
             ovScroll.addView(ov);
             overviewCard.addView(ovScroll);
+            if (heroMode) {
+                TextView expand = new TextView(this);
+                expand.setText("展开 ▾");
+                expand.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_caption));
+                expand.setTextColor(c(R.color.colorPrimary));
+                expand.setPadding(0, dp(6), 0, 0);
+                expand.setFocusable(true);
+                final boolean[] expanded = {false};
+                expand.setOnClickListener(v -> {
+                    expanded[0] = !expanded[0];
+                    ovScroll.setLayoutParams(new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT, expanded[0] ? dp(300) : dp(112)));
+                    expand.setText(expanded[0] ? "收起 ▴" : "展开 ▾");
+                });
+                overviewCard.addView(expand);
+            }
             content.addView(overviewCard);
             content.addView(makeSpacer(12));
         }
@@ -1364,7 +1499,7 @@ public class HomeActivity extends AppCompatActivity {
         FrameLayout playFrame = new FrameLayout(this);
         playFrame.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        playFrame.setMinimumHeight(120);
+        playFrame.setMinimumHeight(dp(56));
 
         // 圆角背景（进度条用两层：蓝色 + 灰色）
         if (progressPct > 0) {
@@ -1375,7 +1510,7 @@ public class HomeActivity extends AppCompatActivity {
             progressLayer.setWeightSum(100);
 
             // 圆角裁剪：用 GradientDrawable 做背景
-            float r = 10 * getResources().getDisplayMetrics().density;
+            float r = 28 * getResources().getDisplayMetrics().density;
             android.graphics.drawable.GradientDrawable gd = new android.graphics.drawable.GradientDrawable();
             gd.setCornerRadii(new float[]{r, r, r, r, r, r, r, r});
             gd.setColor(c(R.color.bg_button_normal));
@@ -1396,7 +1531,7 @@ public class HomeActivity extends AppCompatActivity {
 
             playFrame.addView(progressLayer);
         } else {
-            playFrame.setBackgroundResource(R.drawable.bg_btn_primary);
+            playFrame.setBackgroundResource(R.drawable.bg_play_pill);
         }
 
         // 按钮本身（透明背景）
@@ -1422,7 +1557,7 @@ public class HomeActivity extends AppCompatActivity {
             playBtn.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_body));
             playBtn.setText("▶  继续播放\n" + formatDuration(pTs) + " / " + formatDuration(pDur));
         } else {
-            playBtn.setTextSize(22);
+            playBtn.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_body));
             playBtn.setText("▶  播放");
         }
 
@@ -1479,6 +1614,7 @@ public class HomeActivity extends AppCompatActivity {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         h.setPadding(0, 14, 0, 14);
         h.setText("选择剧集");
+        h.setTag("episodes_section");
         h.setTextColor(c(R.color.text_primary));
         h.setTextSize(22);
         h.setTypeface(Typeface.DEFAULT_BOLD);
@@ -1582,6 +1718,7 @@ public class HomeActivity extends AppCompatActivity {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         h.setPadding(0, 14, 0, 14);
         h.setText("选择剧集");
+        h.setTag("episodes_section");
         h.setTextColor(c(R.color.text_primary));
         h.setTextSize(22);
         h.setTypeface(Typeface.DEFAULT_BOLD);
@@ -2358,7 +2495,7 @@ public class HomeActivity extends AppCompatActivity {
         int[] colors = {0xFFE53935, 0xFF1E88E5, 0xFF43A047, 0xFFFB8C00,
                         0xFF8E24AA, 0xFF00ACC1, 0xFF6D4C41, 0xFF546E7A};
         int colorIdx = item.guid != null ? Math.abs(item.guid.hashCode() % colors.length) : 0;
-        float r = 10 * getResources().getDisplayMetrics().density;
+        float r = 28 * getResources().getDisplayMetrics().density;
         android.graphics.drawable.GradientDrawable badgeBg = new android.graphics.drawable.GradientDrawable();
         badgeBg.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
         badgeBg.setCornerRadius(r);
