@@ -53,6 +53,10 @@ public class PlayerActivity extends AppCompatActivity {
     private SubtitleStyleManager subtitleStyleManager;
     private DefaultTrackSelector trackSelector;
     private float fontScale = 1f;
+    private GridLayout settingsPanel;
+    private Button activeTab;
+    private final java.util.List<Button> tabButtons = new java.util.ArrayList<>();
+    private final java.util.Map<Integer, Integer> originalVisibility = new java.util.HashMap<>();
 
     private Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable infoRefreshR = new Runnable() {
@@ -93,6 +97,10 @@ public class PlayerActivity extends AppCompatActivity {
 
     private float dimen(int res) {
         return getResources().getDimension(res) * fontScale;
+    }
+
+    private int dp(int value) {
+        return (int) (value * getResources().getDisplayMetrics().density);
     }
 
 
@@ -566,6 +574,7 @@ public class PlayerActivity extends AppCompatActivity {
         // 初始焦点给视频区域，始终由 playerView 持有焦点
         playerView.setFocusable(true);
         playerView.requestFocus();
+        rebuildPlayerControls();
     }
 
     /**
@@ -1305,16 +1314,177 @@ public class PlayerActivity extends AppCompatActivity {
         tvTitle.setText(sb.toString().trim());
     }
 
+    /** 底部 Dock + Tab 化二级面板：所有操作集中在底部 */
+    private void rebuildPlayerControls() {
+        LinearLayout ctrl = findViewById(R.id.controller);
+        LinearLayout row = findViewById(R.id.controllerBtnRow);
+        if (ctrl == null || row == null) return;
+        row.setVisibility(View.VISIBLE);
+
+        // 旧的居中/顶部按钮全部弃用
+        View moreEntry = findViewById(R.id.tvMoreEntry);
+        if (moreEntry != null) moreEntry.setVisibility(View.GONE);
+        View topActions = findViewById(R.id.topActions);
+        if (topActions != null) topActions.setVisibility(View.GONE);
+        if (btnDanmu != null) btnDanmu.setVisibility(View.GONE);
+        if (btnLock != null) btnLock.setVisibility(View.GONE);
+
+        // 主控件
+        View play = findViewById(R.id.btnPlayPause);
+        View rew = findViewById(R.id.btnRewind);
+        View fwd = findViewById(R.id.btnForward);
+        row.removeAllViews();
+
+        LinearLayout primary = new LinearLayout(this);
+        primary.setOrientation(LinearLayout.HORIZONTAL);
+        primary.setLayoutParams(new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.MATCH_PARENT, 3));
+        primary.setGravity(Gravity.CENTER_VERTICAL);
+        for (View v : new View[]{play, rew, fwd}) {
+            if (v == null) continue;
+            ViewGroup old = (ViewGroup) v.getParent();
+            if (old != null) old.removeView(v);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, dp(48));
+            lp.setMargins(dp(8), 0, dp(8), 0);
+            v.setLayoutParams(lp);
+            primary.addView(v);
+        }
+        row.addView(primary);
+
+        // Tab 组
+        LinearLayout tabs = new LinearLayout(this);
+        tabs.setOrientation(LinearLayout.HORIZONTAL);
+        tabs.setLayoutParams(new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.MATCH_PARENT, 5));
+        tabs.setGravity(Gravity.CENTER_VERTICAL | Gravity.END);
+        int[] tabIds = {R.id.tab_play, R.id.tab_subtitle, R.id.tab_video,
+                R.id.tab_danmu, R.id.tab_more};
+        String[] labels = {"播放", "字幕", "画面", "弹幕", "更多"};
+        for (int i = 0; i < tabIds.length; i++) {
+            Button tab = new Button(this);
+            tab.setId(tabIds[i]);
+            tab.setText(labels[i]);
+            tab.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_caption));
+            tab.setTextColor(c(R.color.text_secondary));
+            tab.setBackgroundResource(R.drawable.bg_control_btn);
+            tab.setFocusable(true);
+            tab.setMinWidth(0); tab.setMinHeight(0);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, dp(48));
+            lp.setMargins(dp(4), 0, dp(4), 0);
+            tab.setLayoutParams(lp);
+            final int which = i;
+            tab.setOnClickListener(v -> showSettingsPanel(tabIds[which], tab));
+            tabs.addView(tab);
+            tabButtons.add(tab);
+        }
+        row.addView(tabs);
+
+        // 二级面板：复用原有按钮，不删除功能
+        settingsPanel = new GridLayout(this);
+        settingsPanel.setColumnCount(4);
+        settingsPanel.setBackgroundResource(R.drawable.bg_settings_panel);
+        settingsPanel.setPadding(dp(12), dp(12), dp(12), dp(12));
+        settingsPanel.setVisibility(View.GONE);
+        int rowIndex = ctrl.indexOfChild(row);
+        ctrl.addView(settingsPanel, rowIndex);
+
+        int[] secondary = {R.id.btnSpeed, R.id.btnRatio, R.id.btnEpisodeList,
+                R.id.btnNextEp, R.id.btnSkip, R.id.btnInfo, R.id.btnQuality,
+                R.id.btnBrightness, R.id.btnAudioTrack, R.id.btnSubtitleTrack,
+                R.id.btnSubtitleStyle, R.id.btnHdrToggle};
+        for (int id : secondary) {
+            View v = findViewById(id);
+            if (v == null) continue;
+            originalVisibility.put(id, v.getVisibility());
+            ViewGroup old = (ViewGroup) v.getParent();
+            if (old != null) old.removeView(v);
+            GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
+            lp.width = ViewGroup.LayoutParams.WRAP_CONTENT;
+            lp.height = dp(48);
+            lp.setMargins(dp(4), dp(4), dp(4), dp(4));
+            v.setLayoutParams(lp);
+            settingsPanel.addView(v);
+        }
+        Button danmuBtn = new Button(this);
+        danmuBtn.setId(R.id.btn_panel_danmu);
+        danmuBtn.setText("弹幕设置");
+        danmuBtn.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_caption));
+        danmuBtn.setTextColor(c(R.color.text_secondary));
+        danmuBtn.setBackgroundResource(R.drawable.bg_control_btn);
+        danmuBtn.setFocusable(true);
+        danmuBtn.setOnClickListener(v -> danmuManager.showSettings());
+        GridLayout.LayoutParams danmuLp = new GridLayout.LayoutParams();
+        danmuLp.width = ViewGroup.LayoutParams.WRAP_CONTENT;
+        danmuLp.height = dp(48);
+        settingsPanel.addView(danmuBtn, danmuLp);
+        Button lockBtn = new Button(this);
+        lockBtn.setId(R.id.btn_panel_lock);
+        lockBtn.setText("锁定画面");
+        lockBtn.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_caption));
+        lockBtn.setTextColor(c(R.color.text_secondary));
+        lockBtn.setBackgroundResource(R.drawable.bg_control_btn);
+        lockBtn.setFocusable(true);
+        lockBtn.setOnClickListener(v -> {
+            isLocked = true;
+            settingsPanel.setVisibility(View.GONE);
+            showCtrl(true);
+        });
+        GridLayout.LayoutParams lockLp = new GridLayout.LayoutParams();
+        lockLp.width = ViewGroup.LayoutParams.WRAP_CONTENT;
+        lockLp.height = dp(48);
+        settingsPanel.addView(lockBtn, lockLp);
+    }
+
+    private void showSettingsPanel(int tabId, Button tab) {
+        if (settingsPanel == null) return;
+        showCtrl(true);
+        activeTab = tab;
+        for (Button b : tabButtons) {
+            b.setTextColor(b == tab ? c(R.color.text_white) : c(R.color.text_secondary));
+        }
+        int[] play = {R.id.btnSpeed, R.id.btnRatio, R.id.btnSkip,
+                R.id.btnEpisodeList, R.id.btnNextEp};
+        int[] subtitle = {R.id.btnSubtitleTrack, R.id.btnSubtitleStyle, R.id.btnAudioTrack};
+        int[] video = {R.id.btnHdrToggle, R.id.btnBrightness, R.id.btnQuality};
+        int[] chosen = tabId == R.id.tab_play ? play
+                : tabId == R.id.tab_subtitle ? subtitle
+                : tabId == R.id.tab_video ? video : new int[0];
+        java.util.Set<Integer> allowed = new java.util.HashSet<>();
+        for (int id : chosen) allowed.add(id);
+        for (java.util.Map.Entry<Integer, Integer> e : originalVisibility.entrySet()) {
+            View v = findViewById(e.getKey());
+            if (v != null) v.setVisibility(allowed.contains(e.getKey())
+                    ? e.getValue() : View.GONE);
+        }
+        View danmuBtn = findViewById(R.id.btn_panel_danmu);
+        if (danmuBtn != null) danmuBtn.setVisibility(tabId == R.id.tab_danmu ? View.VISIBLE : View.GONE);
+        View lockBtn = findViewById(R.id.btn_panel_lock);
+        if (lockBtn != null) lockBtn.setVisibility(tabId == R.id.tab_more ? View.VISIBLE : View.GONE);
+
+        settingsPanel.setVisibility(View.VISIBLE);
+        settingsPanel.post(() -> {
+            for (int i = 0; i < settingsPanel.getChildCount(); i++) {
+                View v = settingsPanel.getChildAt(i);
+                if (v.getVisibility() == View.VISIBLE) { v.requestFocus(); break; }
+            }
+        });
+    }
+
     private void showCtrl(boolean show) {
+        if (!show && settingsPanel != null && settingsPanel.getVisibility() == View.VISIBLE) {
+            return; // 二级面板打开时不自动隐藏
+        }
         if (show && isLocked) {
-            btnLock.setVisibility(View.VISIBLE);
+            btnLock.setVisibility(View.GONE);
             return;
         }
         ctrlVis = show;
         controller.setVisibility(show ? View.VISIBLE : View.INVISIBLE);
         topBar.setVisibility(show ? View.VISIBLE : View.INVISIBLE);
-        btnLock.setVisibility(show ? View.VISIBLE : View.INVISIBLE);
-        btnDanmu.setVisibility(show ? View.VISIBLE : View.INVISIBLE);
+        btnLock.setVisibility(View.GONE);
+        btnDanmu.setVisibility(View.GONE);
         if (show) {
             updateTitle();
             resetHideTimer();
@@ -1578,6 +1748,12 @@ public class PlayerActivity extends AppCompatActivity {
     // ========== 按键 ==========
 
     @Override public boolean onKeyDown(int k, KeyEvent e) {
+        if (settingsPanel != null && settingsPanel.getVisibility() == View.VISIBLE
+                && (k == KeyEvent.KEYCODE_BACK || k == KeyEvent.KEYCODE_ESCAPE)) {
+            settingsPanel.setVisibility(View.GONE);
+            if (activeTab != null) activeTab.requestFocus();
+            return true;
+        }
         if (isLocked) {
             if (k == KeyEvent.KEYCODE_BACK) {
                 if (btnLock.hasFocus() || controller.hasFocus()) {

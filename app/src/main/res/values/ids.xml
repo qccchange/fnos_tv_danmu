@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="tab_play" type="id" />
+    <item name="tab_subtitle" type="id" />
+    <item name="tab_video" type="id" />
+    <item name="tab_danmu" type="id" />
+    <item name="tab_more" type="id" />
+    <item name="btn_panel_danmu" type="id" />
+    <item name="btn_panel_lock" type="id" />
+</resources>
