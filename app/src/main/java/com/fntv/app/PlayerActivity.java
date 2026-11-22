@@ -59,6 +59,7 @@ public class PlayerActivity extends AppCompatActivity {
     private final java.util.Map<Integer, Integer> originalVisibility = new java.util.HashMap<>();
     private final java.util.Map<Integer, Integer> naturalVisibility = new java.util.HashMap<>();
     private final java.util.Map<Integer, View> panelViews = new java.util.HashMap<>();
+    private View panelDanmuBtn, panelLockBtn;
     private boolean filteringPanel;
 
     private Handler handler = new Handler(Looper.getMainLooper());
@@ -1410,9 +1411,9 @@ public class PlayerActivity extends AppCompatActivity {
             ViewGroup old = (ViewGroup) v.getParent();
             if (old != null) old.removeView(v);
             GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
-            lp.width = ViewGroup.LayoutParams.WRAP_CONTENT;
+            lp.width = dp(200);
             lp.height = dp(48);
-            lp.setMargins(dp(4), dp(4), dp(4), dp(4));
+            lp.setMargins(dp(6), dp(6), dp(6), dp(6));
             v.setLayoutParams(lp);
             settingsPanel.addView(v);
         }
@@ -1425,9 +1426,11 @@ public class PlayerActivity extends AppCompatActivity {
         danmuBtn.setFocusable(true);
         danmuBtn.setOnClickListener(v -> danmuManager.showSettings());
         GridLayout.LayoutParams danmuLp = new GridLayout.LayoutParams();
-        danmuLp.width = ViewGroup.LayoutParams.WRAP_CONTENT;
+        danmuLp.width = dp(200);
         danmuLp.height = dp(48);
+        danmuLp.setMargins(dp(6), dp(6), dp(6), dp(6));
         settingsPanel.addView(danmuBtn, danmuLp);
+        panelDanmuBtn = danmuBtn;
         Button lockBtn = new Button(this);
         lockBtn.setId(R.id.btn_panel_lock);
         lockBtn.setText("锁定画面");
@@ -1441,9 +1444,11 @@ public class PlayerActivity extends AppCompatActivity {
             showCtrl(true);
         });
         GridLayout.LayoutParams lockLp = new GridLayout.LayoutParams();
-        lockLp.width = ViewGroup.LayoutParams.WRAP_CONTENT;
+        lockLp.width = dp(200);
         lockLp.height = dp(48);
+        lockLp.setMargins(dp(6), dp(6), dp(6), dp(6));
         settingsPanel.addView(lockBtn, lockLp);
+        panelLockBtn = lockBtn;
     }
 
     private void showSettingsPanel(int tabId, Button tab) {
@@ -1453,39 +1458,48 @@ public class PlayerActivity extends AppCompatActivity {
         for (Button b : tabButtons) {
             b.setTextColor(b == tab ? c(R.color.text_white) : c(R.color.text_secondary));
         }
-        int[] play = {R.id.btnSpeed, R.id.btnRatio, R.id.btnSkip,
-                R.id.btnEpisodeList, R.id.btnNextEp};
-        int[] subtitle = {R.id.btnSubtitleTrack, R.id.btnSubtitleStyle, R.id.btnAudioTrack};
-        int[] video = {R.id.btnHdrToggle, R.id.btnBrightness, R.id.btnQuality};
-        int[] chosen = tabId == R.id.tab_play ? play
-                : tabId == R.id.tab_subtitle ? subtitle
-                : tabId == R.id.tab_video ? video : new int[0];
-        java.util.Set<Integer> allowed = new java.util.HashSet<>();
-        for (int id : chosen) allowed.add(id);
-        filteringPanel = true;
-        java.util.Set<Integer> dynamic = new java.util.HashSet<>(java.util.Arrays.asList(
-                R.id.btnEpisodeList, R.id.btnNextEp, R.id.btnQuality, R.id.btnBrightness));
-        for (java.util.Map.Entry<Integer, Integer> e : originalVisibility.entrySet()) {
-            if (dynamic.contains(e.getKey())) continue; // 动态显隐交给业务代码，不强制覆盖
-            View v = panelViews.get(e.getKey());
-            if (v == null) continue;
-            Integer natural = naturalVisibility.get(e.getKey());
-            v.setVisibility(allowed.contains(e.getKey())
-                    ? (natural != null ? natural : e.getValue()) : View.GONE);
-        }
-        filteringPanel = false;
-        View danmuBtn = findViewById(R.id.btn_panel_danmu);
-        if (danmuBtn != null) danmuBtn.setVisibility(tabId == R.id.tab_danmu ? View.VISIBLE : View.GONE);
-        View lockBtn = findViewById(R.id.btn_panel_lock);
-        if (lockBtn != null) lockBtn.setVisibility(tabId == R.id.tab_more ? View.VISIBLE : View.GONE);
 
+        java.util.List<View> items = new java.util.ArrayList<>();
+        if (tabId == R.id.tab_play) {
+            addPanelItem(items, R.id.btnSpeed);
+            addPanelItem(items, R.id.btnRatio);
+            addPanelItem(items, R.id.btnSkip);
+            addPanelItem(items, R.id.btnEpisodeList);
+            addPanelItem(items, R.id.btnNextEp);
+        } else if (tabId == R.id.tab_subtitle) {
+            addPanelItem(items, R.id.btnSubtitleTrack);
+            addPanelItem(items, R.id.btnSubtitleStyle);
+            addPanelItem(items, R.id.btnAudioTrack);
+        } else if (tabId == R.id.tab_video) {
+            addPanelItem(items, R.id.btnHdrToggle);
+            addPanelItem(items, R.id.btnBrightness);
+            addPanelItem(items, R.id.btnQuality);
+        } else if (tabId == R.id.tab_danmu) {
+            if (panelDanmuBtn != null) items.add(panelDanmuBtn);
+        } else if (tabId == R.id.tab_more) {
+            addPanelItem(items, R.id.btnInfo);
+            if (panelLockBtn != null) items.add(panelLockBtn);
+        }
+
+        settingsPanel.removeAllViews();
+        for (int i = 0; i < items.size(); i++) {
+            View v = items.get(i);
+            GridLayout.LayoutParams lp = new GridLayout.LayoutParams(
+                    GridLayout.spec(i / 4), GridLayout.spec(i % 4));
+            lp.width = dp(200);
+            lp.height = dp(48);
+            lp.setMargins(dp(6), dp(6), dp(6), dp(6));
+            settingsPanel.addView(v, lp);
+        }
         settingsPanel.setVisibility(View.VISIBLE);
         settingsPanel.post(() -> {
-            for (int i = 0; i < settingsPanel.getChildCount(); i++) {
-                View v = settingsPanel.getChildAt(i);
-                if (v.getVisibility() == View.VISIBLE) { v.requestFocus(); break; }
-            }
+            if (items.size() > 0) items.get(0).requestFocus();
         });
+    }
+
+    private void addPanelItem(java.util.List<View> items, int id) {
+        View v = panelViews.get(id);
+        if (v != null && v.getVisibility() != View.GONE) items.add(v);
     }
 
     private void showCtrl(boolean show) {
