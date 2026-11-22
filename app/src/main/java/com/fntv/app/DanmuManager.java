@@ -308,6 +308,24 @@ public class DanmuManager {
         int screenH = activity.getResources().getDisplayMetrics().heightPixels;
         dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, (int) (screenH * 0.9f));
 
+        // 基础 / 高级 分页：所有控件 ID 保留，取消/确定与读取逻辑不变
+        final View basicPage = dialog.findViewById(R.id.dm_basic_page);
+        final View advancedPage = dialog.findViewById(R.id.dm_advanced_page);
+        final Button tabBasic = dialog.findViewById(R.id.dm_tab_basic);
+        final Button tabAdvanced = dialog.findViewById(R.id.dm_tab_advanced);
+        tabBasic.setOnClickListener(v -> {
+            basicPage.setVisibility(View.VISIBLE);
+            advancedPage.setVisibility(View.GONE);
+            tabBasic.setTextColor(0xFFFFFFFF);
+            tabAdvanced.setTextColor(0xFFB0B0B0);
+        });
+        tabAdvanced.setOnClickListener(v -> {
+            basicPage.setVisibility(View.GONE);
+            advancedPage.setVisibility(View.VISIBLE);
+            tabBasic.setTextColor(0xFFB0B0B0);
+            tabAdvanced.setTextColor(0xFFFFFFFF);
+        });
+
         final Switch sw = dialog.findViewById(R.id.dm_sw);
         sw.setChecked(isOn[0]);
 

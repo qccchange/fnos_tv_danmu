@@ -20,6 +20,7 @@
 
     <!-- 控件尺寸 -->
     <dimen name="tv_control_h">48dp</dimen>
+    <dimen name="tv_setting_row_h">56dp</dimen>
     <dimen name="tv_cta_h">56dp</dimen>
     <dimen name="tv_icon_tile">40dp</dimen>
 

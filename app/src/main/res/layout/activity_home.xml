@@ -157,7 +157,7 @@ DPAD 遥控器友好
                     android:layout_centerVertical="true"
                     android:text="设置"
                     android:textColor="@color/text_primary"
-                    android:textSize="15sp"
+                    android:textSize="@dimen/tv_text_body"
                     android:textStyle="bold" />
 
             </RelativeLayout>
@@ -184,7 +184,7 @@ DPAD 遥控器友好
                         android:id="@+id/rlThemeSetting"
                         android:layout_width="match_parent"
                         android:layout_height="@dimen/tv_control_h"
-                        android:background="@drawable/bg_input"
+                        android:background="@drawable/bg_setting_card"
                         android:focusable="true"
                         android:paddingLeft="12dp"
                         android:paddingRight="12dp">
@@ -223,7 +223,7 @@ DPAD 遥控器友好
                             android:layout_height="wrap_content"
                             android:text="账户信息"
                             android:textColor="@color/text_primary"
-                            android:textSize="14sp"
+                            android:textSize="@dimen/tv_text_body"
                             android:textStyle="bold" />
 
                         <View
@@ -239,7 +239,7 @@ DPAD 遥控器友好
                             android:layout_height="wrap_content"
                             android:text="用户名: --"
                             android:textColor="@color/text_secondary"
-                            android:textSize="13sp" />
+                            android:textSize="@dimen/tv_text_body" />
 
                         <TextView
                             android:id="@+id/tvSettingServer"
@@ -248,7 +248,7 @@ DPAD 遥控器友好
                             android:layout_marginTop="4dp"
                             android:text=""
                             android:textColor="@color/text_hint"
-                            android:textSize="11sp" />
+                            android:textSize="@dimen/tv_text_caption" />
 
                     </LinearLayout>
 
@@ -266,7 +266,7 @@ DPAD 遥控器友好
                             android:layout_height="wrap_content"
                             android:text="播放设置"
                             android:textColor="@color/text_primary"
-                            android:textSize="14sp"
+                            android:textSize="@dimen/tv_text_body"
                             android:textStyle="bold" />
 
                         <View
@@ -279,8 +279,8 @@ DPAD 遥控器友好
                         <RelativeLayout
                             android:id="@+id/rlDecoderSetting"
                             android:layout_width="match_parent"
-                            android:layout_height="52dp"
-                            android:background="@drawable/bg_input"
+                            android:layout_height="@dimen/tv_setting_row_h"
+                            android:background="@drawable/bg_setting_card"
                             android:focusable="true"
                             android:paddingLeft="12dp"
                             android:paddingRight="12dp">
@@ -291,7 +291,7 @@ DPAD 遥控器友好
                                 android:layout_centerVertical="true"
                                 android:text="解码模式"
                                 android:textColor="@color/text_primary"
-                                android:textSize="14sp" />
+                                android:textSize="@dimen/tv_text_body" />
 
                             <TextView
                                 android:id="@+id/tvDecoderValue"
@@ -301,7 +301,7 @@ DPAD 遥控器友好
                                 android:layout_centerVertical="true"
                                 android:text="硬解"
                                 android:textColor="@color/colorAccent"
-                                android:textSize="14sp" />
+                                android:textSize="@dimen/tv_text_body" />
 
                         </RelativeLayout>
 
@@ -309,9 +309,9 @@ DPAD 遥控器友好
                         <RelativeLayout
                             android:id="@+id/rlSeekStep"
                             android:layout_width="match_parent"
-                            android:layout_height="52dp"
+                            android:layout_height="@dimen/tv_setting_row_h"
                             android:layout_marginTop="8dp"
-                            android:background="@drawable/bg_input"
+                            android:background="@drawable/bg_setting_card"
                             android:focusable="true"
                             android:paddingLeft="12dp"
                             android:paddingRight="12dp">
@@ -322,7 +322,7 @@ DPAD 遥控器友好
                                 android:layout_centerVertical="true"
                                 android:text="快进退步长"
                                 android:textColor="@color/text_primary"
-                                android:textSize="14sp" />
+                                android:textSize="@dimen/tv_text_body" />
 
                             <TextView
                                 android:id="@+id/tvSeekStepValue"
@@ -332,7 +332,7 @@ DPAD 遥控器友好
                                 android:layout_centerVertical="true"
                                 android:text="10s"
                                 android:textColor="@color/colorAccent"
-                                android:textSize="14sp" />
+                                android:textSize="@dimen/tv_text_body" />
 
                         </RelativeLayout>
 
@@ -340,9 +340,9 @@ DPAD 遥控器友好
                         <RelativeLayout
                             android:id="@+id/rlBufferTime"
                             android:layout_width="match_parent"
-                            android:layout_height="52dp"
+                            android:layout_height="@dimen/tv_setting_row_h"
                             android:layout_marginTop="8dp"
-                            android:background="@drawable/bg_input"
+                            android:background="@drawable/bg_setting_card"
                             android:focusable="true"
                             android:paddingLeft="12dp"
                             android:paddingRight="12dp">
@@ -353,7 +353,7 @@ DPAD 遥控器友好
                                 android:layout_centerVertical="true"
                                 android:text="缓冲时间"
                                 android:textColor="@color/text_primary"
-                                android:textSize="14sp" />
+                                android:textSize="@dimen/tv_text_body" />
 
                             <TextView
                                 android:id="@+id/tvBufferTimeValue"
@@ -363,7 +363,7 @@ DPAD 遥控器友好
                                 android:layout_centerVertical="true"
                                 android:text="30s"
                                 android:textColor="@color/colorAccent"
-                                android:textSize="14sp" />
+                                android:textSize="@dimen/tv_text_body" />
 
                         </RelativeLayout>
 
@@ -371,9 +371,9 @@ DPAD 遥控器友好
                         <RelativeLayout
                             android:id="@+id/rlDanmuSetting"
                             android:layout_width="match_parent"
-                            android:layout_height="52dp"
+                            android:layout_height="@dimen/tv_setting_row_h"
                             android:layout_marginTop="8dp"
-                            android:background="@drawable/bg_input"
+                            android:background="@drawable/bg_setting_card"
                             android:focusable="true"
                             android:paddingLeft="12dp"
                             android:paddingRight="12dp">
@@ -384,7 +384,7 @@ DPAD 遥控器友好
                                 android:layout_centerVertical="true"
                                 android:text="弹幕服务器"
                                 android:textColor="@color/text_primary"
-                                android:textSize="14sp" />
+                                android:textSize="@dimen/tv_text_body" />
 
                             <TextView
                                 android:id="@+id/tvDanmuUrl"
@@ -394,7 +394,7 @@ DPAD 遥控器友好
                                 android:layout_centerVertical="true"
                                 android:text=""
                                 android:textColor="@color/colorAccent"
-                                android:textSize="12sp"
+                                android:textSize="@dimen/tv_text_caption"
                                 android:maxWidth="160dp"
                                 android:singleLine="true"
                                 android:ellipsize="end" />
@@ -417,7 +417,7 @@ DPAD 遥控器友好
                             android:layout_height="wrap_content"
                             android:text="关于"
                             android:textColor="@color/text_primary"
-                            android:textSize="14sp"
+                            android:textSize="@dimen/tv_text_body"
                             android:textStyle="bold" />
 
                         <View
@@ -433,31 +433,31 @@ DPAD 遥控器友好
                             android:layout_height="wrap_content"
                             android:text="FN TV v1.0"
                             android:textColor="@color/text_secondary"
-                            android:textSize="13sp" />
+                            android:textSize="@dimen/tv_text_body" />
 
                         <Button
                             android:id="@+id/btnCheckUpdate"
                             android:layout_width="match_parent"
-                            android:layout_height="48dp"
+                            android:layout_height="@dimen/tv_control_h"
                             android:layout_marginTop="12dp"
                             android:background="@drawable/bg_btn_primary"
                             android:focusable="true"
                             android:text="检查更新"
                             android:textAllCaps="false"
                             android:textColor="@color/text_white"
-                            android:textSize="14sp" />
+                            android:textSize="@dimen/tv_text_body" />
 
                         <Button
                             android:id="@+id/btnFeedback"
                             android:layout_width="match_parent"
-                            android:layout_height="48dp"
+                            android:layout_height="@dimen/tv_control_h"
                             android:layout_marginTop="10dp"
-                            android:background="@drawable/bg_input"
+                            android:background="@drawable/bg_setting_card"
                             android:focusable="true"
                             android:text="问题反馈"
                             android:textAllCaps="false"
                             android:textColor="@color/text_primary"
-                            android:textSize="14sp" />
+                            android:textSize="@dimen/tv_text_body" />
 
                     </LinearLayout>
 
@@ -465,14 +465,14 @@ DPAD 遥控器友好
                     <Button
                         android:id="@+id/btnLogout"
                         android:layout_width="match_parent"
-                        android:layout_height="52dp"
+                        android:layout_height="@dimen/tv_setting_row_h"
                         android:layout_marginTop="24dp"
                         android:background="@drawable/bg_btn_primary"
                         android:focusable="true"
                         android:text="退出登录"
                         android:textAllCaps="false"
                         android:textColor="@color/text_white"
-                        android:textSize="15sp"
+                        android:textSize="@dimen/tv_text_body"
                         android:textStyle="bold" />
 
                 </LinearLayout>
@@ -492,7 +492,7 @@ DPAD 遥控器友好
     <LinearLayout
         android:id="@+id/tabBar"
         android:layout_width="match_parent"
-        android:layout_height="52dp"
+        android:layout_height="@dimen/tv_setting_row_h"
         android:background="@color/bg_dark"
         android:gravity="center"
         android:orientation="horizontal"
@@ -511,7 +511,7 @@ DPAD 遥控器友好
             android:text="影视"
             android:textAllCaps="false"
             android:textColor="@color/text_primary"
-            android:textSize="13sp" />
+            android:textSize="@dimen/tv_text_body" />
 
         <Button
             android:id="@+id/tabLibrary"
@@ -526,7 +526,7 @@ DPAD 遥控器友好
             android:text="媒体库"
             android:textAllCaps="false"
             android:textColor="@color/text_primary"
-            android:textSize="13sp" />
+            android:textSize="@dimen/tv_text_body" />
 
         <Button
             android:id="@+id/tabSettings"
@@ -540,7 +540,7 @@ DPAD 遥控器友好
             android:text="设置"
             android:textAllCaps="false"
             android:textColor="@color/text_primary"
-            android:textSize="13sp" />
+            android:textSize="@dimen/tv_text_body" />
 
     </LinearLayout>
 

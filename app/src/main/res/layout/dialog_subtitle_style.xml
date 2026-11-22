@@ -15,7 +15,7 @@
             android:layout_height="wrap_content"
             android:text="字幕样式"
             android:textColor="#FFF"
-            android:textSize="18sp"
+            android:textSize="@dimen/tv_text_title"
             android:textStyle="bold"
             android:paddingBottom="12dp" />
 
@@ -28,7 +28,7 @@
             android:layout_height="wrap_content"
             android:text="字幕颜色"
             android:textColor="#EEE"
-            android:textSize="13sp"
+            android:textSize="@dimen/tv_text_caption"
             android:paddingTop="10dp"
             android:paddingBottom="4dp" />
 
@@ -52,7 +52,7 @@
                 android:layout_weight="1"
                 android:text="覆盖字幕内嵌颜色/字号"
                 android:textColor="#EEE"
-                android:textSize="13sp" />
+                android:textSize="@dimen/tv_text_caption" />
 
             <Switch
                 android:id="@+id/sub_override"
@@ -67,7 +67,7 @@
             android:layout_height="wrap_content"
             android:text="图片字幕（PGS/DVB）仅支持位置与透明度，颜色不可用"
             android:textColor="#888"
-            android:textSize="11sp"
+            android:textSize="@dimen/tv_text_caption"
             android:paddingTop="8dp" />
 
         <LinearLayout
@@ -80,7 +80,7 @@
             <Button
                 android:id="@+id/sub_apply"
                 android:layout_width="0dp"
-                android:layout_height="40dp"
+                android:layout_height="@dimen/tv_control_h"
                 android:layout_weight="1"
                 android:layout_marginRight="4dp"
                 android:background="@drawable/bg_chip"
@@ -91,7 +91,7 @@
             <Button
                 android:id="@+id/sub_cancel"
                 android:layout_width="0dp"
-                android:layout_height="40dp"
+                android:layout_height="@dimen/tv_control_h"
                 android:layout_weight="1"
                 android:layout_marginLeft="4dp"
                 android:layout_marginRight="4dp"
@@ -103,7 +103,7 @@
             <Button
                 android:id="@+id/sub_ok"
                 android:layout_width="0dp"
-                android:layout_height="40dp"
+                android:layout_height="@dimen/tv_control_h"
                 android:layout_weight="1"
                 android:layout_marginLeft="4dp"
                 android:background="@drawable/bg_chip"
