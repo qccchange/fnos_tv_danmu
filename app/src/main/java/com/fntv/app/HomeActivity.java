@@ -46,8 +46,6 @@ public class HomeActivity extends AppCompatActivity {
 
     private int currentTab = 0;
     private final List<MediaDbItem> mediaLibraries = new ArrayList<>();
-    private boolean showingOverview = true;
-    private boolean showingEpisodes = false;
     private boolean loadingPreviews = false;
 
     // 媒体库浏览排序状态
@@ -76,32 +74,38 @@ public class HomeActivity extends AppCompatActivity {
     private TextView carouselTitle, carouselMeta;
     private LinearLayout carouselDots;
 
-    // 横竖屏切换时保存的页面状态
-    private String savedBrowseGuid, savedBrowseTitle;
-    private List<PlayListItem> savedBrowseList;
-    private PlayListItem savedDetailItem;
-    private PlayInfoResponse savedDetailInfo;
-    private boolean browseFromLibrary;
-    private String savedLiveChannelTitle;
+    // ==================== 导航栈 ====================
+    // 每帧 = 一个页面 + 重建它所需的全部数据；navStack 的栈顶恒等于当前页面。
+    // 跳转 = push 新帧（renderFrame 渲染）；BACK = pop 后重绘新栈顶；栈空时 BACK 走双击退出。
+    // 横竖屏切换/从播放器返回 = 重绘当前帧（renderFrame 从数据重建视图，不重新 push）。
+    // 帧类型语义与渲染映射见 renderFrame()。
+
+    private static final int NAV_OVERVIEW = 0, NAV_BROWSE_MOVIE = 1, NAV_BROWSE_LIB = 2,
+            NAV_LIVE = 3, NAV_DETAIL = 4, NAV_EPISODES = 5, NAV_SETTINGS = 6, NAV_LIB_MAIN = 7;
+
+    /** 导航帧：记录一个页面的全部重建数据（列表/详情数据在异步加载完成后回填） */
+    private static class NavFrame {
+        final int type;
+        String guid, title;              // BROWSE_*: 媒体库 guid/标题
+        List<PlayListItem> list;         // BROWSE_*/LIVE/EPISODES: 缓存列表
+        PlayListItem item;               // DETAIL: 条目 / EPISODES: 原始条目
+        PlayInfoResponse info;           // DETAIL: 详情数据
+        String seasonGuid;               // EPISODES: 列表未加载时的取数来源
+        int seasonNumber;                // EPISODES: 季号
+        int total;                       // LIVE: 条目总数（标题计数）
+        NavFrame(int type) { this.type = type; }
+    }
+
+    private final java.util.Deque<NavFrame> navStack = new java.util.ArrayDeque<>();
+    private boolean detailFetchPending = false;
 
     @Override
 
     public void onConfigurationChanged(android.content.res.Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
-        if (savedDetailItem != null) {
-            buildDetailPage(savedDetailItem, savedDetailInfo);
-        } else if (savedBrowseList != null) {
-            if (browseFromLibrary) { renderBrowseGrid(savedBrowseList, savedBrowseTitle); } else { renderGridInContainer(savedBrowseList, savedBrowseTitle, moviesContainer); }
-        } else if (currentTab == 1 && savedBrowseGuid != null) {
-            browseItemsInContainer(savedBrowseGuid, savedBrowseTitle,
-                    libraryContainer, tvLibraryLoading);
-        } else if (currentTab == 0) {
-            loadingPreviews = false;
-            overviewBuilt = false;
-            showOverview();
-            loadAllPreviews();
-            loadLiveChannels();
-        }
+        if (navStack.isEmpty()) return;
+        // 屏幕配置变化：按当前帧原样重绘（renderFrame 自带横竖屏适配）
+        renderFrame(navStack.peek());
     }
 
     @Override
@@ -139,10 +143,9 @@ public class HomeActivity extends AppCompatActivity {
         setupFeedback();
         setupSearch();
 
-        switchTab(0);
         tvMoviesLoading.setVisibility(View.VISIBLE);
         tvMoviesLoading.setText("正在加载媒体库...");
-        loadOverview();
+        switchTab(0);
     }
 
 
@@ -188,33 +191,33 @@ public class HomeActivity extends AppCompatActivity {
 
     protected void onResume() {
         super.onResume();
-        if (savedDetailItem != null) {
-            buildDetailPage(savedDetailItem, savedDetailInfo);
-        } else if (currentTab == 0 && !mediaLibraries.isEmpty() && overviewBuilt && showingOverview) {
+        if (navStack.isEmpty()) return;
+        NavFrame f = navStack.peek();
+        if (f.type == NAV_DETAIL || f.type == NAV_EPISODES) {
+            renderFrame(f);
+        } else if (f.type == NAV_OVERVIEW && !mediaLibraries.isEmpty() && overviewBuilt) {
             loadingPreviews = false;
             showOverview();
             loadAllPreviews();
             loadContinueWatching();
             loadLiveChannels();
-        } else if (currentTab == 0 && !overviewBuilt && showingOverview) {
+        } else if (f.type == NAV_OVERVIEW && !overviewBuilt) {
             loadOverview();
         }
+        // BROWSE_*/LIVE/LIB_MAIN/SETTINGS：视图树仍完整，无需重建
     }
 
 
     private void setupTabs() {
         tabMovies.setOnClickListener(v -> switchTab(0));
-        tabLibrary.setOnClickListener(v -> { switchTab(1); loadMediaLibraries(); });
+        tabLibrary.setOnClickListener(v -> switchTab(1));
         tabSettings.setOnClickListener(v -> switchTab(2));
 
         // TV 规范：焦点移到 Tab 即切换页面（点击仍保留）
         View.OnFocusChangeListener tabFocus = (v, hasFocus) -> {
             if (!hasFocus) return;
             int idx = v == tabMovies ? 0 : (v == tabLibrary ? 1 : 2);
-            if (idx != currentTab) {
-                if (idx == 1) loadMediaLibraries();
-                switchTab(idx);
-            }
+            if (idx != currentTab) switchTab(idx);
         };
         tabMovies.setOnFocusChangeListener(tabFocus);
         tabLibrary.setOnFocusChangeListener(tabFocus);
@@ -224,20 +227,109 @@ public class HomeActivity extends AppCompatActivity {
 
     private void switchTab(int index) {
         int prevTab = currentTab;
+        // 已在该 Tab 的根页（无历史可清）：不重复重建
+        if (index == prevTab && navStack.size() == 1) return;
         currentTab = index;
-        // 从媒体库切换到其他标签时清除搜索状态
-        if (prevTab == 1 && isSearching) clearSearch();
-        // 切换标签时清除保存的页面状态，防止横竖屏切回时错误恢复
-        savedBrowseList = null; savedBrowseGuid = null;
+        // 离开媒体库 Tab 时清除搜索态（清文本；列表由 renderFrame 统一加载）
+        if (prevTab == 1 && isSearching) { isSearching = false; etSearch.setText(""); }
+        // Tab 切换 = 重置导航根：旧 Tab 的历史随上下文一起作废
+        navStack.clear();
+        NavFrame root = new NavFrame(rootFrameType(index));
+        navStack.push(root);
+        renderFrame(root);
+        if (index == 0) tabMovies.requestFocus();
+        else if (index == 1) tabLibrary.requestFocus();
+        else tabSettings.requestFocus();
+    }
+
+    private static int rootFrameType(int tab) {
+        return tab == 0 ? NAV_OVERVIEW : (tab == 1 ? NAV_LIB_MAIN : NAV_SETTINGS);
+    }
+
+    /** 只切面板可见性与 Tab 选中态（不改导航栈）：进入详情页等跨面板跳转用 */
+    private void showPanel(int index) {
+        currentTab = index;
         panelMovies.setVisibility(index == 0 ? View.VISIBLE : View.GONE);
         panelLibrary.setVisibility(index == 1 ? View.VISIBLE : View.GONE);
         panelSettings.setVisibility(index == 2 ? View.VISIBLE : View.GONE);
         tabMovies.setSelected(index == 0);
         tabLibrary.setSelected(index == 1);
         tabSettings.setSelected(index == 2);
-        if (index == 0) tabMovies.requestFocus();
-        else if (index == 1) tabLibrary.requestFocus();
-        else tabSettings.requestFocus();
+    }
+
+    /** 按帧数据重建页面（幂等；异步帧渲染完成后把列表回填进帧，供返回/旋转复用） */
+    private void renderFrame(NavFrame f) {
+        switch (f.type) {
+            case NAV_OVERVIEW:
+                showPanel(0);
+                if (overviewBuilt && !mediaLibraries.isEmpty()) {
+                    loadingPreviews = false;
+                    showOverview();
+                    loadAllPreviews();
+                    loadContinueWatching();
+                    loadLiveChannels();
+                } else {
+                    loadOverview();
+                }
+                break;
+            case NAV_BROWSE_MOVIE:
+                showPanel(0);
+                if (f.list != null) { renderGridInContainer(f.list, f.title, moviesContainer); restoreFocusIfNeeded(); }
+                else browseItemsInContainer(f.guid, f.title, moviesContainer, tvMoviesLoading, f);
+                break;
+            case NAV_BROWSE_LIB:
+                showPanel(1);
+                etSearch.setVisibility(View.GONE);
+                if (f.list != null) { renderGridInContainer(f.list, f.title, libraryContainer); restoreFocusIfNeeded(); }
+                else browseItemsInContainer(f.guid, f.title, libraryContainer, tvLibraryLoading, f);
+                break;
+            case NAV_LIVE:
+                showPanel(0);
+                if (f.list != null) {
+                    moviesContainer.removeAllViews();
+                    renderLiveChannelGrid(f.list, f.total);
+                    restoreFocusIfNeeded();
+                } else {
+                    fetchLiveChannels(f);
+                }
+                break;
+            case NAV_LIB_MAIN:
+                showPanel(1);
+                etSearch.setText("");
+                loadMediaLibraries();
+                break;
+            case NAV_DETAIL:
+                showPanel(0);
+                buildDetailPage(f.item, f.info);
+                break;
+            case NAV_EPISODES:
+                showPanel(0);
+                if (f.list != null) showEpisodes(f.list, f.seasonNumber, f.item);
+                else loadEpisodesForSeason(f.seasonGuid, f.seasonNumber, f.item, f);
+                break;
+            case NAV_SETTINGS:
+                showPanel(2);
+                break;
+        }
+    }
+
+    /** 逐层返回：弹出当前帧，重绘上一层 */
+    private void navigateBack() {
+        if (navStack.size() <= 1) return;
+        navStack.pop();
+        renderFrame(navStack.peek());
+    }
+
+    /** 进入媒体库浏览页（同层重复点击不重复压栈） */
+    private void navigateBrowse(String guid, String title, boolean inLibrary) {
+        int type = inLibrary ? NAV_BROWSE_LIB : NAV_BROWSE_MOVIE;
+        NavFrame top = navStack.peek();
+        if (top != null && top.type == type && guid != null && guid.equals(top.guid)) return;
+        NavFrame f = new NavFrame(type);
+        f.guid = guid; f.title = title;
+        navStack.push(f);
+        if (inLibrary) browseItemsInContainer(guid, title, libraryContainer, tvLibraryLoading, f);
+        else browseItemsInContainer(guid, title, moviesContainer, tvMoviesLoading, f);
     }
 
 
@@ -246,7 +338,6 @@ public class HomeActivity extends AppCompatActivity {
 
     private void loadOverview() {
         Log.d("Overview", "loadOverview start  t=" + (System.currentTimeMillis() - t0) + "ms");
-        showingOverview = true;
         overviewBuilt = false;
         loadingPreviews = false;
         tvMoviesLoading.setVisibility(View.VISIBLE);
@@ -295,11 +386,7 @@ public class HomeActivity extends AppCompatActivity {
 
     private void showOverview() {
         tvMoviesLoading.setVisibility(View.GONE);
-        savedDetailItem = null; savedDetailInfo = null; savedBrowseList = null; savedBrowseGuid = null;
-        savedLiveChannelTitle = null;
-        showingEpisodes = false;
         moviesContainer.removeAllViews();
-        showingOverview = true;
         overviewBuilt = true;
         focusRestorePending = lastFocusedTag != null;
 
@@ -426,12 +513,12 @@ public class HomeActivity extends AppCompatActivity {
         viewAll.setFocusable(true);
         viewAll.setId(View.generateViewId());
         viewAll.setPadding(24, 0, 24, 0);
-        viewAll.setOnClickListener(v -> browseItems(libGuid, libTitle));
+        viewAll.setOnClickListener(v -> navigateBrowse(libGuid, libTitle, false));
         viewAll.setOnFocusChangeListener((v, hasFocus) -> {
             viewAll.setTextColor(hasFocus ? 0xFF81C784 : c(R.color.text_secondary));
             viewAll.setBackgroundColor(hasFocus ? c(R.color.bg_chip_focus) : c(R.color.transparent));
         });
-        headerRow.setOnClickListener(v -> browseItems(libGuid, libTitle));
+        headerRow.setOnClickListener(v -> navigateBrowse(libGuid, libTitle, false));
         headerRow.setFocusable(true);
         headerRow.setOnFocusChangeListener((v, hasFocus) -> {
             if (hasFocus) viewAll.requestFocus();
@@ -958,19 +1045,10 @@ public class HomeActivity extends AppCompatActivity {
     // ==================== 查看全部 ====================
 
 
-    private void browseItems(String ancestorGuid, String title) {
-        browseItemsInContainer(ancestorGuid, title, moviesContainer, tvMoviesLoading);
-    }
-
     private void browseItemsInContainer(String ancestorGuid, String title,
-                                        LinearLayout container, TextView loadingView) {
+                                        LinearLayout container, TextView loadingView, NavFrame frame) {
         Log.d("Overview", "browseItems: guid=" + ancestorGuid + " title=" + title);
-        savedDetailItem = null; savedDetailInfo = null;
-        showingEpisodes = false;
-        savedBrowseGuid = ancestorGuid; savedBrowseTitle = title;
-        browseFromLibrary = (container == libraryContainer);
-        if (browseFromLibrary) etSearch.setVisibility(View.GONE);
-        if (container == moviesContainer) showingOverview = false;
+        if (container == libraryContainer) etSearch.setVisibility(View.GONE);
 
         // 存储当前浏览上下文，排序变化时用于重新加载
         currentBrowseGuid = ancestorGuid;
@@ -998,64 +1076,12 @@ public class HomeActivity extends AppCompatActivity {
                         && response.body().data != null && response.body().data.list != null
                         && !response.body().data.list.isEmpty()) {
                     List<PlayListItem> list = response.body().data.list;
-                    savedBrowseList = list;
+                    if (frame != null) frame.list = list;   // 回填缓存列表，供返回/旋转时无网络重建
                     int total = response.body().data.total;
                     Log.d("Overview", "browseItems: got " + list.size() + " items, total=" + total);
 
-                    TextView h = new TextView(HomeActivity.this);
-                    h.setLayoutParams(new LinearLayout.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-                    h.setPadding(6, 8, 6, 4);
-                    h.setText(title + "  (" + total + "项)");
-                    h.setTextColor(c(R.color.text_primary));
-                    h.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_body));
-                    container.addView(h);
-
-                    // 排序筛选栏
-                    LinearLayout sortFilterBar = makeLibSortFilterBar();
-                    sortFilterBar.setTag("lib_sort_bar");
-                    container.addView(sortFilterBar);
-                    container.addView(makeSpacer(6));
-
-                    // 自适应列数网格（最小卡片宽200dp）
-                    float density = getResources().getDisplayMetrics().density;
-                    int cols = Math.max(3, (int) (getResources().getDisplayMetrics().widthPixels / (130 * density)));
-                    for (int idx = 0; idx < list.size(); idx += cols) {
-                        LinearLayout row = new LinearLayout(HomeActivity.this);
-                        row.setLayoutParams(new LinearLayout.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-                        row.setOrientation(LinearLayout.HORIZONTAL);
-                        int inRow = Math.min(cols, list.size() - idx);
-                        for (int c = 0; c < cols && idx + c < list.size(); c++) {
-                            PlayListItem pli = list.get(idx + c);
-                            View card = makeItemCard(pli);
-                            // 图片按9:16竖版比例
-                            if (card instanceof ViewGroup) {
-                                View ch = ((ViewGroup) card).getChildAt(0);
-                                if (ch instanceof ImageView) {
-                                    int posterH = Math.min(550, (getResources().getDisplayMetrics().widthPixels / cols) * 3 / 2);
-                                    ch.setLayoutParams(new LinearLayout.LayoutParams(
-                                            ViewGroup.LayoutParams.MATCH_PARENT, posterH));
-                                }
-                            }
-                            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                                    0, ViewGroup.LayoutParams.WRAP_CONTENT, 1);
-                            lp.rightMargin = 6;
-                            lp.leftMargin = 6;
-                            card.setLayoutParams(lp);
-                            row.addView(card);
-                        }
-                        // 补齐空位
-                        for (int e = inRow; e < cols; e++) {
-                            View spacer = new View(HomeActivity.this);
-                            spacer.setLayoutParams(new LinearLayout.LayoutParams(
-                                    0, ViewGroup.LayoutParams.MATCH_PARENT, 1));
-                            row.addView(spacer);
-                        }
-                        container.addView(row);
-                        container.addView(makeSpacer(12));
-                    }
-                    new Handler(Looper.getMainLooper()).post(() -> loadImagesLazily(container, 0));
+                    // 统一用浏览页渲染器绘制（标题+排序栏+网格），避免两条路径漂移
+                    renderGridInContainer(list, title, container);
                 } else {
                     TextView e = new TextView(HomeActivity.this);
                     e.setLayoutParams(new LinearLayout.LayoutParams(
@@ -1074,12 +1100,6 @@ public class HomeActivity extends AppCompatActivity {
         });
     }
 
-    /** 从缓存数据重绘浏览网格（横竖屏切换时调用） */
-
-    private void renderBrowseGrid(List<PlayListItem> list, String title) {
-        renderGridInContainer(list, title, libraryContainer);
-    }
-
     /** 在指定容器中绘制缓存网格 */
 
     private void renderGridInContainer(List<PlayListItem> list, String title, LinearLayout container) {
@@ -1094,6 +1114,12 @@ public class HomeActivity extends AppCompatActivity {
         h.setTextColor(c(R.color.text_primary));
         h.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_body));
         container.addView(h);
+
+        // 排序筛选栏（浏览页的一部分：缓存重绘/旋转恢复时也必须存在）
+        LinearLayout sortFilterBar = makeLibSortFilterBar();
+        sortFilterBar.setTag("lib_sort_bar");
+        container.addView(sortFilterBar);
+        container.addView(makeSpacer(6));
 
         float density = getResources().getDisplayMetrics().density;
         int cols = Math.max(3, (int) (getResources().getDisplayMetrics().widthPixels / (130 * density)));
@@ -1137,8 +1163,11 @@ public class HomeActivity extends AppCompatActivity {
     /** 使用当前排序重新加载媒体库内容 */
     private void reFetchLibraryItems() {
         if (currentBrowseGuid == null || currentBrowseContainer == null) return;
+        // 排序变化不换页：刷新当前 BROWSE 帧的缓存列表
+        NavFrame top = navStack.peek();
+        NavFrame frame = (top != null && (top.type == NAV_BROWSE_MOVIE || top.type == NAV_BROWSE_LIB)) ? top : null;
         browseItemsInContainer(currentBrowseGuid, currentBrowseTitle,
-                currentBrowseContainer, currentBrowseLoading);
+                currentBrowseContainer, currentBrowseLoading, frame);
     }
 
     /** 构建排序筛选栏 */
@@ -1266,13 +1295,12 @@ public class HomeActivity extends AppCompatActivity {
 
 
     private void showDetail(PlayListItem item) {
-        switchTab(0);
-        savedBrowseList = null; savedBrowseGuid = null;
-        showingOverview = false;
-        showingEpisodes = false;
+        if (detailFetchPending) return;   // 加载中忽略重复点击，避免重复压栈
+        showPanel(0);
         moviesContainer.removeAllViews();
         tvMoviesLoading.setVisibility(View.VISIBLE);
         tvMoviesLoading.setText("加载中...");
+        detailFetchPending = true;
 
         Map<String, String> body = new HashMap<>();
         body.put("item_guid", item.guid);
@@ -1280,16 +1308,21 @@ public class HomeActivity extends AppCompatActivity {
             @Override
             public void onResponse(Call<ApiResponse<PlayInfoResponse>> call,
                                    Response<ApiResponse<PlayInfoResponse>> response) {
+                detailFetchPending = false;
                 tvMoviesLoading.setVisibility(View.GONE);
                 if (!response.isSuccessful() || response.body() == null || response.body().code != 0
                         || response.body().data == null) {
                     Toast.makeText(HomeActivity.this, "获取详情失败", Toast.LENGTH_SHORT).show();
                     return;
                 }
+                NavFrame f = new NavFrame(NAV_DETAIL);
+                f.item = item; f.info = response.body().data;
+                navStack.push(f);
                 buildDetailPage(item, response.body().data);
             }
             @Override
             public void onFailure(Call<ApiResponse<PlayInfoResponse>> call, Throwable t) {
+                detailFetchPending = false;
                 tvMoviesLoading.setVisibility(View.GONE);
                 Toast.makeText(HomeActivity.this, "网络错误: " + t.getMessage(), Toast.LENGTH_SHORT).show();
             }
@@ -1321,7 +1354,6 @@ public class HomeActivity extends AppCompatActivity {
 
     private void buildDetailPage(PlayListItem item, PlayInfoResponse info) {
         moviesContainer.removeAllViews();
-        savedDetailItem = item; savedDetailInfo = info;
 
         boolean isLandscape = getResources().getConfiguration().orientation
                 == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
@@ -1394,7 +1426,7 @@ public class HomeActivity extends AppCompatActivity {
                     ViewGroup.LayoutParams.WRAP_CONTENT, dp(40), Gravity.TOP | Gravity.START);
             backLp.setMargins(dp(24), dp(20), 0, 0);
             backBtn.setLayoutParams(backLp);
-            backBtn.setOnClickListener(v -> loadOverview());
+            backBtn.setOnClickListener(v -> navigateBack());
             hero.addView(backBtn);
 
             // 底部标题 + 短元信息 + 评分
@@ -1869,7 +1901,7 @@ public class HomeActivity extends AppCompatActivity {
                     card.addView(ar);
 
                     final int sn = season.seasonNumber > 0 ? season.seasonNumber : 1;
-                    card.setOnClickListener(v -> loadEpisodesForSeason(season.guid, sn, item));
+                    card.setOnClickListener(v -> navigateEpisodesFetch(season.guid, sn, item));
                     content.addView(card);
                     content.addView(makeSpacer(12));
                 }
@@ -1878,9 +1910,16 @@ public class HomeActivity extends AppCompatActivity {
         });
     }
 
-    /** 加载某季的剧集列表（点击季后调用，直接显示剧集） */
-    private void loadEpisodesForSeason(String seasonGuid, int seasonNumber, PlayListItem original) {
-        showingEpisodes = true;
+    /** 进入某季剧集页（异步取数） */
+    private void navigateEpisodesFetch(String seasonGuid, int seasonNumber, PlayListItem original) {
+        NavFrame f = new NavFrame(NAV_EPISODES);
+        f.seasonGuid = seasonGuid; f.seasonNumber = seasonNumber; f.item = original;
+        navStack.push(f);
+        loadEpisodesForSeason(seasonGuid, seasonNumber, original, f);
+    }
+
+    /** 加载某季的剧集列表（列表已加载时走 showEpisodes；这里处理未缓存的帧重绘） */
+    private void loadEpisodesForSeason(String seasonGuid, int seasonNumber, PlayListItem original, NavFrame frame) {
         moviesContainer.removeAllViews();
         // 标题
         TextView h = new TextView(this);
@@ -1900,6 +1939,8 @@ public class HomeActivity extends AppCompatActivity {
                                    Response<ApiResponse<List<PlayListItem>>> response) {
                 if (!response.isSuccessful() || response.body() == null || response.body().code != 0
                         || response.body().data == null || response.body().data.isEmpty()) return;
+                if (navStack.peek() != frame) return;   // 用户已离开该页，不再回填
+                frame.list = response.body().data;
                 for (PlayListItem ep : response.body().data) {
                     moviesContainer.addView(makeEpisodeItem(ep, ep.guid.equals(original.guid)));
                     moviesContainer.addView(makeSpacer(8));
@@ -1959,16 +2000,23 @@ public class HomeActivity extends AppCompatActivity {
             ar.setGravity(Gravity.CENTER); ar.setPadding(8, 0, 0, 0);
             card.addView(ar);
 
-            card.setOnClickListener(v -> showEpisodes(eps, sn, sn == 1 ? item : item));
+            card.setOnClickListener(v -> navigateEpisodes(eps, sn, item));
             content.addView(card);
             content.addView(makeSpacer(6));
         }
     }
 
+    /** 进入某季剧集页（列表已在手，直接压栈渲染） */
+    private void navigateEpisodes(List<PlayListItem> eps, int sn, PlayListItem original) {
+        NavFrame f = new NavFrame(NAV_EPISODES);
+        f.list = eps; f.seasonNumber = sn; f.item = original;
+        navStack.push(f);
+        showEpisodes(eps, sn, original);
+    }
+
     /** 显示某季剧集 */
 
     private void showEpisodes(List<PlayListItem> eps, int sn, PlayListItem original) {
-        showingEpisodes = true;
         moviesContainer.removeAllViews();
 
         // 标题
@@ -2288,7 +2336,7 @@ public class HomeActivity extends AppCompatActivity {
         card.setTag(lib);
         card.setOnClickListener(v -> {
             MediaDbItem m = (MediaDbItem) card.getTag();
-            browseItemsInContainer(m.guid, m.title, libraryContainer, tvLibraryLoading);
+            navigateBrowse(m.guid, m.title, true);
         });
         return card;
     }
@@ -2808,11 +2856,14 @@ public class HomeActivity extends AppCompatActivity {
 
     /** 直播频道查看全部 */
     private void browseLiveChannels() {
-        savedDetailItem = null;
-        savedDetailInfo = null;
-        showingEpisodes = false;
-        showingOverview = false;
-        savedLiveChannelTitle = "直播频道";
+        NavFrame top = navStack.peek();
+        if (top != null && top.type == NAV_LIVE) return;   // 同层重复点击不重复压栈
+        NavFrame f = new NavFrame(NAV_LIVE);
+        navStack.push(f);
+        fetchLiveChannels(f);
+    }
+
+    private void fetchLiveChannels(NavFrame frame) {
         moviesContainer.removeAllViews();
         tvMoviesLoading.setVisibility(View.VISIBLE);
         tvMoviesLoading.setText("加载直播频道...");
@@ -2837,6 +2888,7 @@ public class HomeActivity extends AppCompatActivity {
                 }
                 List<PlayListItem> list = response.body().data.list;
                 int total = response.body().data.total;
+                frame.list = list; frame.total = total;
                 Log.d("LiveChannel", "直播频道查看全部: total=" + total + " items=" + list.size()
                         + " resp=" + new com.google.gson.Gson().toJson(response.body()));
                 renderLiveChannelGrid(list, total);
@@ -2907,30 +2959,24 @@ public class HomeActivity extends AppCompatActivity {
 
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_ESCAPE) {
-            // 搜索框有焦点 → 隐藏键盘并清除搜索
+            // 搜索模式 → 清除搜索回库根。不能裸 clearFocus()：焦点会落到首个可聚焦控件（影视 Tab），
+            // 触发"焦点即切页"把用户劫持到影视首页；这里显式把焦点钉在媒体库 Tab。
+            if (isSearching) {
+                if (etSearch.isFocused()) hideKeyboard();
+                clearSearch();
+                tabLibrary.requestFocus();
+                return true;
+            }
+            // 搜索框有焦点（键盘开着但未触发搜索）→ 只收键盘，焦点归还媒体库 Tab
             if (etSearch.isFocused()) {
                 hideKeyboard();
-                etSearch.clearFocus();
-            }
-            // 搜索模式 → 清除搜索
-            if (isSearching) {
-                clearSearch();
+                tabLibrary.requestFocus();
                 return true;
             }
-            // 媒体库浏览中 → 返回媒体库首页
-            if (currentTab == 1 && savedBrowseGuid != null) {
-                savedBrowseGuid = null; savedBrowseList = null;
-                loadMediaLibraries();
-                return true;
-            }
-            // 剧集选择页 → 返回详情页
-            if (showingEpisodes && savedDetailItem != null && savedDetailInfo != null) {
-                showingEpisodes = false;
-                buildDetailPage(savedDetailItem, savedDetailInfo);
-                return true;
-            }
-            if (!showingOverview) {
-                loadOverview();
+            // 逐层返回：弹出当前帧，按上一层帧的数据重绘
+            if (navStack.size() > 1) {
+                navStack.pop();
+                renderFrame(navStack.peek());
                 return true;
             }
             if (backPressedTime + 2000 > System.currentTimeMillis()) {
