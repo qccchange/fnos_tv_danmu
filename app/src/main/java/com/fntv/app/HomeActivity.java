@@ -809,7 +809,7 @@ public class HomeActivity extends AppCompatActivity {
         carouselTitle.setText(item.title != null ? item.title : "");
         String vote = voteLabel(item);
         carouselMeta.setText((vote != null ? "★ " + vote + "　" : "") + item.getCategoryLabel());
-        String url = makePosterUrl(item.poster);
+        String url = makePosterUrl(item.poster, 1920);   // 轮播是全幅大图槽位：按显示宽度取图，400 会糊
         if (url != null && carouselBg != null) {
             carouselBg.setTag(url);
             SimpleImageLoader.load(url, carouselBg, apiManager.getClient());
