@@ -116,14 +116,6 @@ public class PlayListItem {
         return "Movie".equals(type) || "Video".equals(type) || "Episode".equals(type);
     }
 
-    /** 获取完整海报URL */
-    public String getPosterUrl(String baseUrl) {
-        if (poster != null && !poster.isEmpty()) {
-            return baseUrl + "/v/api/v1/sys/img" + poster + "?w=400";
-        }
-        return null;
-    }
-
     /** 获取显示标题 */
     public String getDisplayTitle() {
         if (tvTitle != null && !tvTitle.isEmpty()) {
