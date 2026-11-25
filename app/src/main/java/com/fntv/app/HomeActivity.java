@@ -68,11 +68,11 @@ public class HomeActivity extends AppCompatActivity {
     private String lastFocusedTag;
     private boolean focusRestorePending;
     private final java.util.Map<String, View> focusViews = new java.util.HashMap<>();
-    private java.util.List<PlayListItem> carouselItems;
-    private int carouselIndex = 0;
+    // Hero = 焦点镜像（tvOS TopShelf 契约）：上方大图恒等于最近聚焦的 shelf 卡片，自身不再是独立浏览模式
     private ImageView carouselBg;
     private TextView carouselTitle, carouselMeta;
-    private LinearLayout carouselDots;
+    private android.widget.Button carouselPlayBtn;
+    private PlayListItem carouselCurrent;
 
     // ==================== 导航栈 ====================
     // 每帧 = 一个页面 + 重建它所需的全部数据；navStack 的栈顶恒等于当前页面。
@@ -587,6 +587,8 @@ public class HomeActivity extends AppCompatActivity {
 
         hsv.addView(row);
         cont.addView(hsv);
+        // 继续观看是第一优先位：默认 hero 镜像其首条（之后随卡片焦点走）
+        mirrorHero(items.get(0));
         restoreFocusIfNeeded();
 
         new Handler(Looper.getMainLooper()).post(new Runnable() {
@@ -619,7 +621,7 @@ public class HomeActivity extends AppCompatActivity {
         final String focusTag = "card_" + item.guid;
         focusViews.put(focusTag, card);
         card.setOnFocusChangeListener((v, hasFocus) -> {
-            if (hasFocus) lastFocusedTag = focusTag;
+            if (hasFocus) { lastFocusedTag = focusTag; mirrorHero(item); }   // 焦点镜像：选谁，hero 就是谁
         });
 
         RoundedImageView poster = new RoundedImageView(this);
@@ -687,6 +689,7 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     /** 首页顶部 FeaturedCarousel：左右键切换，Enter 播放 */
+    /** 构建 hero 骨架；图/标题/播放目标恒由 mirrorHero 焦点镜像驱动（tvOS TopShelf 契约） */
     private void buildCarousel(java.util.List<PlayListItem> items) {
         View box = null;
         for (int i = 0; i < moviesContainer.getChildCount(); i++) {
@@ -696,8 +699,6 @@ public class HomeActivity extends AppCompatActivity {
         if (!(box instanceof FrameLayout) || items == null || items.isEmpty()) return;
         final FrameLayout root = (FrameLayout) box;
         root.removeAllViews();
-        carouselItems = new java.util.ArrayList<>(items.subList(0, Math.min(5, items.size())));
-        carouselIndex = 0;
 
         carouselBg = new ImageView(this);
         carouselBg.setLayoutParams(new FrameLayout.LayoutParams(
@@ -745,84 +746,47 @@ public class HomeActivity extends AppCompatActivity {
         play.setTextColor(0xFF121418);
         play.setBackgroundResource(R.drawable.bg_play_white);
         play.setFocusable(true);
+        play.setFocusableInTouchMode(true);
         play.setMinWidth(0); play.setMinHeight(0);
         LinearLayout.LayoutParams playLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, dp(40));
         playLp.setMargins(0, dp(10), 0, 0);
         play.setLayoutParams(playLp);
         bottom.addView(play);
+        carouselPlayBtn = play;   // 文案与点击目标恒随镜像条目更新
         play.setOnClickListener(v -> {
-            if (carouselItems != null && !carouselItems.isEmpty()) {
-                PlayListItem it = carouselItems.get(carouselIndex);
-                launchPlayer(it.guid, it.title, it.tvTitle != null ? it.tvTitle : "",
-                        it.episodeNumber, it.poster, it.getCategoryLabel(),
-                        it.ts, it.duration, it.parentGuid);
-            }
+            PlayListItem it = carouselCurrent;
+            if (it == null) return;
+            launchPlayer(it.guid, it.title, it.tvTitle != null ? it.tvTitle : "",
+                    it.episodeNumber, it.poster, it.getCategoryLabel(),
+                    it.ts, it.duration, it.parentGuid);
         });
 
         root.addView(bottom);
 
-        carouselDots = new LinearLayout(this);
-        carouselDots.setOrientation(LinearLayout.HORIZONTAL);
-        carouselDots.setGravity(Gravity.END);
-        FrameLayout.LayoutParams dl = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
-                Gravity.BOTTOM | Gravity.END);
-        dl.setMargins(0, 0, dp(20), dp(22));
-        carouselDots.setLayoutParams(dl);
-        for (int i = 0; i < carouselItems.size(); i++) {
-            View dot = new View(this);
-            android.graphics.drawable.GradientDrawable dd =
-                    new android.graphics.drawable.GradientDrawable();
-            dd.setShape(android.graphics.drawable.GradientDrawable.OVAL);
-            dd.setColor(0xFFFFFFFF);
-            dot.setBackgroundDrawable(dd);
-            carouselDots.addView(dot, new LinearLayout.LayoutParams(dp(6), dp(6)));
-        }
-        root.addView(carouselDots);
-
-        root.setFocusable(true);
-        root.setOnKeyListener((v, keyCode, event) -> {
-            if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
-            if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) { shiftCarousel(-1); return true; }
-            if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) { shiftCarousel(1); return true; }
-            if (keyCode == KeyEvent.KEYCODE_ENTER || keyCode == KeyEvent.KEYCODE_DPAD_CENTER) {
-                play.performClick();
-                return true;
-            }
-            return false;
-        });
-
-        updateCarousel(0);
+        // 默认镜像第一个精选条目；“继续观看”加载完成后会被其首条覆盖（继续观看是第一优先位）
+        mirrorHero(items.get(0));
     }
 
-    private void shiftCarousel(int delta) {
-        if (carouselItems == null || carouselItems.isEmpty()) return;
-        int next = (carouselIndex + delta + carouselItems.size()) % carouselItems.size();
-        updateCarousel(next);
-    }
-
-    private void updateCarousel(int index) {
-        if (carouselItems == null || carouselItems.isEmpty()) return;
-        carouselIndex = Math.max(0, Math.min(index, carouselItems.size() - 1));
-        PlayListItem item = carouselItems.get(carouselIndex);
-        carouselTitle.setText(item.title != null ? item.title : "");
+    /** hero 焦点镜像：聚焦哪张 shelf 卡，上方大图/标题/播放目标就变成谁 */
+    private void mirrorHero(PlayListItem item) {
+        if (item == null || carouselBg == null || !carouselBg.isAttachedToWindow()) return;
+        carouselCurrent = item;
+        carouselTitle.setText(formatContinueTitle(item));
         String vote = voteLabel(item);
-        carouselMeta.setText((vote != null ? "★ " + vote + "　" : "") + item.getCategoryLabel());
-        String url = makePosterUrl(item.poster, 1920);   // 轮播是全幅大图槽位：按显示宽度取图，400 会糊
-        if (url != null && carouselBg != null) {
+        StringBuilder meta = new StringBuilder();
+        if (vote != null) meta.append("★ ").append(vote);
+        String cat = categoryZh(item.getCategoryLabel());
+        if (!cat.isEmpty() && !"未分类".equals(cat)) { if (meta.length() > 0) meta.append("　"); meta.append(cat); }
+        if (item.duration > 0) { if (meta.length() > 0) meta.append("  ·  "); meta.append(formatDuration(item.duration)); }
+        carouselMeta.setText(meta.toString());
+        String url = makePosterUrl(item.poster, 1920);   // 全幅槽位按显示宽度取图
+        if (url != null) {
             carouselBg.setTag(url);
             SimpleImageLoader.load(url, carouselBg, apiManager.getClient());
         }
-        if (carouselDots != null) {
-            for (int i = 0; i < carouselDots.getChildCount(); i++) {
-                View d = carouselDots.getChildAt(i);
-                LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) d.getLayoutParams();
-                lp.width = i == carouselIndex ? dp(16) : dp(6);
-                d.setLayoutParams(lp);
-                d.setAlpha(i == carouselIndex ? 1f : 0.45f);
-            }
-        }
+        if (carouselPlayBtn != null)
+            carouselPlayBtn.setText(item.ts > 0 ? "▶  继续播放" : "▶  播放");
     }
 
     private void loadContinueWatching() {
@@ -958,6 +922,7 @@ public class HomeActivity extends AppCompatActivity {
         focusScale(card);
         card.setPadding(6, 6, 6, 6);
         card.setFocusable(true);
+        card.setOnFocusChangeListener((v, hasFocus) -> { if (hasFocus) mirrorHero(item); });   // 概览 shelf 卡：焦点镜像驱动 hero
 
         // 海报 — 等页面显示完后统一逐张加载；外层 FrameLayout 用于叠评分角标
         FrameLayout posterWrap = new FrameLayout(this);
