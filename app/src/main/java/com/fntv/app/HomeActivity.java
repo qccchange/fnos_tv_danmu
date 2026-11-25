@@ -529,12 +529,17 @@ public class HomeActivity extends AppCompatActivity {
 
 
     private String makePosterUrl(String path) {
+        return makePosterUrl(path, 400);
+    }
+
+    /** 清晰度是“目标显示宽度”的函数（第一性）：卡位取 400，hero 全幅取 1920，不能一个尺寸喂所有槽位 */
+    private String makePosterUrl(String path, int widthPx) {
         if (path == null || path.isEmpty()) {
             Log.d("PosterUrl", "path is null/empty");
             return null;
         }
         String p = path.startsWith("/") ? path : "/" + path;
-        String fullUrl = baseUrl + "/v/api/v1/sys/img" + p + "?w=400";
+        String fullUrl = baseUrl + "/v/api/v1/sys/img" + p + "?w=" + widthPx;
         Log.d("PosterUrl", "poster=" + path + " -> " + fullUrl);
         return fullUrl;
     }
@@ -1353,6 +1358,13 @@ public class HomeActivity extends AppCompatActivity {
         }
     }
 
+    /** 剧集语境判定（契约）：只有带季/集语境的条目才渲染选集区；电影与单条视频永不出现“选择剧集” */
+    private boolean hasSeriesContext(String typeStr, PlayInfoResponse info) {
+        if ("TV".equalsIgnoreCase(typeStr) || "Episode".equalsIgnoreCase(typeStr)) return true;
+        return info.item != null && ((info.item.tvTitle != null && !info.item.tvTitle.isEmpty())
+                || info.item.numberOfSeasons > 0);
+    }
+
     /** 详情页信息徽章（chip）：语义单元独立成枚，不再拼进一个长句 */
     private TextView makeInfoChip(String text) {
         TextView t = new TextView(this);
@@ -1427,14 +1439,17 @@ public class HomeActivity extends AppCompatActivity {
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
             heroBg.setScaleType(ImageView.ScaleType.CENTER_CROP);
             heroBg.setBackgroundColor(c(R.color.bg_card));
-            if (pUrl != null) {
-                heroBg.setTag(pUrl);
+            // 清晰度随显示宽度取图：横版图按 1920 取（高→低采样=清晰）；无横版图时海报 400 模糊铺底（模糊本来就不需细节）
+            final String heroUrl = hasBackdrop ? makePosterUrl(info.item.backdrops, 1920)
+                    : makePosterUrl(posterPath, 400);
+            if (heroUrl != null) {
+                heroBg.setTag(heroUrl);
                 if (hasBackdrop) {
                     new Handler(Looper.getMainLooper()).post(() ->
-                            SimpleImageLoader.load(pUrl, heroBg, apiManager.getClient()));
+                            SimpleImageLoader.load(heroUrl, heroBg, apiManager.getClient()));
                 } else {
                     new Handler(Looper.getMainLooper()).post(() ->
-                            SimpleImageLoader.loadBlur(pUrl, heroBg, apiManager.getClient()));
+                            SimpleImageLoader.loadBlur(heroUrl, heroBg, apiManager.getClient()));
                 }
             }
             hero.addView(heroBg);
@@ -1641,7 +1656,8 @@ public class HomeActivity extends AppCompatActivity {
             }
             content.addView(makeSpacer(12));
 
-            buildDetailContent(content, item, info, epTitle, series, epNum, pUrl, false);
+            buildDetailContent(content, item, info, epTitle, series, epNum,
+                    makePosterUrl(posterPath, 1200), false);
 
             scrollView.addView(content);
             moviesContainer.addView(scrollView);
@@ -1915,7 +1931,7 @@ public class HomeActivity extends AppCompatActivity {
         }
 
         // Episode 类型 → 先加载季列表，点击某季后加载该季剧集
-        if (item.guid != null && !item.guid.isEmpty()) {
+        if (item.guid != null && !item.guid.isEmpty() && hasSeriesContext(typeStr, info)) {
             content.addView(makeSpacer(16));
             loadSeasons(content, item.guid, item, pTs);
         }
