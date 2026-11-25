@@ -48,6 +48,74 @@ public class SimpleImageLoader {
         cache.evictAll();
     }
 
+    /** 加载模糊背景图：按 ~24px 宽降采样解码，ImageView 放大时双线性插值天然糊——用于只有竖版海报时横铺 hero 背景（Plex 式兜底） */
+    public static void loadBlur(String url, ImageView view, OkHttpClient client) {
+        if (url == null || url.isEmpty()) {
+            view.setImageBitmap(null);
+            view.setBackgroundColor(0xFF222222);
+            return;
+        }
+        final String key = url + "#blur";
+        Bitmap cached = cache.get(key);
+        if (cached != null) {
+            view.setScaleType(ImageView.ScaleType.FIT_XY);
+            view.setImageBitmap(cached);
+            return;
+        }
+        view.setScaleType(ImageView.ScaleType.FIT_XY);
+        new BlurLoadTask(view, client).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, url);
+    }
+
+    private static class BlurLoadTask extends AsyncTask<String, Void, Bitmap> {
+        private final ImageView imageView;
+        private final OkHttpClient client;
+
+        BlurLoadTask(ImageView imageView, OkHttpClient client) {
+            this.imageView = imageView;
+            this.client = client;
+        }
+
+        @Override
+        protected Bitmap doInBackground(String... params) {
+            try {
+                Request request = new Request.Builder().url(params[0]).build();
+                Response response = client.newCall(request).execute();
+                if (response.code() != 200 || response.body() == null) return null;
+                InputStream input = response.body().byteStream();
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                byte[] buf = new byte[8192];
+                int n;
+                while ((n = input.read(buf)) != -1) baos.write(buf, 0, n);
+                input.close();
+                byte[] data = baos.toByteArray();
+
+                BitmapFactory.Options bounds = new BitmapFactory.Options();
+                bounds.inJustDecodeBounds = true;
+                BitmapFactory.decodeByteArray(data, 0, data.length, bounds);
+                if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null;
+
+                BitmapFactory.Options o = new BitmapFactory.Options();
+                o.inPreferredConfig = Bitmap.Config.RGB_565;
+                o.inSampleSize = Math.max(1, Math.max(bounds.outWidth / 24, bounds.outHeight / 14));
+                Bitmap bmp = BitmapFactory.decodeByteArray(data, 0, data.length, o);
+                if (bmp != null) cache.put(params[0] + "#blur", bmp);
+                return bmp;
+            } catch (Exception e) {
+                return null;
+            }
+        }
+
+        @Override
+        protected void onPostExecute(Bitmap bmp) {
+            if (bmp != null) {
+                imageView.setScaleType(ImageView.ScaleType.FIT_XY);
+                imageView.setImageBitmap(bmp);
+            } else {
+                imageView.setBackgroundColor(0xFF222222);
+            }
+        }
+    }
+
     private static class ImageLoadTask extends AsyncTask<String, Void, Bitmap> {
         private final ImageView imageView;
         private final OkHttpClient client;

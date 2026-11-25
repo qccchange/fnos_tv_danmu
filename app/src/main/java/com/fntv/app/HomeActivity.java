@@ -1341,6 +1341,33 @@ public class HomeActivity extends AppCompatActivity {
         }
     }
 
+    /** 类型/分类英文值 → 中文（契约表；未知值原样透出，不吞信息） */
+    private String categoryZh(String slug) {
+        if (slug == null) return "";
+        switch (slug) {
+            case "movie": case "Movie": return "电影";
+            case "tv": case "TV": case "Episode": return "剧集";
+            case "video": case "Video": return "视频";
+            case "live": case "Live": return "直播";
+            default: return slug;
+        }
+    }
+
+    /** 详情页信息徽章（chip）：语义单元独立成枚，不再拼进一个长句 */
+    private TextView makeInfoChip(String text) {
+        TextView t = new TextView(this);
+        t.setText(text);
+        t.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_caption));
+        t.setTextColor(c(R.color.text_secondary));
+        t.setBackgroundResource(R.drawable.bg_chip);
+        t.setPadding(dp(12), dp(5), dp(12), dp(5));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.setMargins(0, 0, dp(8), 0);
+        t.setLayoutParams(lp);
+        return t;
+    }
+
     /** 详情页大标题 */
     private String detailTitle(PlayListItem item, PlayInfoResponse info, String epTitle, String series, int epNum) {
         String t = epTitle != null ? epTitle : "";
@@ -1387,11 +1414,14 @@ public class HomeActivity extends AppCompatActivity {
             content.setOrientation(LinearLayout.VERTICAL);
             content.setPadding(0, 0, 0, dp(20));
 
-            // Hero 容器
+            // Hero 容器：全幅氛围图 + 双渐变 + 标题锁版 + 主 CTA 钉在图内（Netflix/tvOS 10 英尺惯例）
             FrameLayout hero = new FrameLayout(this);
             hero.setLayoutParams(new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, (int) (screenH * 0.34f)));
+                    ViewGroup.LayoutParams.MATCH_PARENT, (int) (screenH * 0.46f)));
 
+            // 氛围图：有横版大图 → 清晰 CENTER_CROP 出血；只剩竖版海报 → 降采样模糊铺底（Plex 式兜底，避免黑边和竖图硬裁）
+            final boolean hasBackdrop = info.item != null && info.item.backdrops != null
+                    && !info.item.backdrops.isEmpty();
             ImageView heroBg = new ImageView(this);
             heroBg.setLayoutParams(new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -1399,41 +1429,53 @@ public class HomeActivity extends AppCompatActivity {
             heroBg.setBackgroundColor(c(R.color.bg_card));
             if (pUrl != null) {
                 heroBg.setTag(pUrl);
-                new Handler(Looper.getMainLooper()).post(() ->
-                        SimpleImageLoader.load(pUrl, heroBg, apiManager.getClient()));
+                if (hasBackdrop) {
+                    new Handler(Looper.getMainLooper()).post(() ->
+                            SimpleImageLoader.load(pUrl, heroBg, apiManager.getClient()));
+                } else {
+                    new Handler(Looper.getMainLooper()).post(() ->
+                            SimpleImageLoader.loadBlur(pUrl, heroBg, apiManager.getClient()));
+                }
             }
             hero.addView(heroBg);
 
-            // 渐变遮罩：顶部透明 → 底部背景色，保证文字可读
+            // 渐变遮罩 A：全幅纵向（顶部透明 → 底部背景色），标题/CTA 落在稳定暗区上
             View scrim = new View(this);
             scrim.setLayoutParams(new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
             android.graphics.drawable.GradientDrawable scrimGd =
                     new android.graphics.drawable.GradientDrawable(
                             android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
-                            new int[]{0x00000000, 0x99000000, c(R.color.bg_dark)});
+                            new int[]{0x00000000, 0x88000000, c(R.color.bg_dark)});
             scrim.setBackgroundDrawable(scrimGd);
             hero.addView(scrim);
 
-            // 左上角返回
-            Button backBtn = new Button(this);
-            backBtn.setText("← 返回");
-            backBtn.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_caption));
-            backBtn.setTextColor(c(R.color.text_white));
-            backBtn.setBackgroundResource(R.drawable.bg_chip);
-            backBtn.setFocusable(true);
-            FrameLayout.LayoutParams backLp = new FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT, dp(40), Gravity.TOP | Gravity.START);
-            backLp.setMargins(dp(24), dp(20), 0, 0);
-            backBtn.setLayoutParams(backLp);
-            backBtn.setOnClickListener(v -> navigateBack());
-            hero.addView(backBtn);
+            // 渐变遮罩 B：左侧横向（左深 → 右透明），左侧文字列与艺术图分离（Netflix 惯例）
+            View scrimL = new View(this);
+            scrimL.setLayoutParams(new FrameLayout.LayoutParams(
+                    (int) (getResources().getDisplayMetrics().widthPixels * 0.62f),
+                    ViewGroup.LayoutParams.MATCH_PARENT, Gravity.START));
+            scrimL.setBackgroundDrawable(new android.graphics.drawable.GradientDrawable(
+                    android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
+                    new int[]{0xB3000000, 0x33000000, 0x00000000}));
+            hero.addView(scrimL);
 
-            // 底部标题 + 短元信息 + 评分
+            // 无左上返回钮：tvOS/Netflix 惯例，返回由遥控器 BACK 承担（导航栈逐层返回），
+            // 左上留给氛围艺术的呼吸空间，标题锁版是 hero 唯一主人。
+
+            // 主行动区参数：与 buildDetailContent 同一取数规则（续播进度钉在氛围图底边）
+            final long hTs = info.ts > 0 ? info.ts : (item.ts > 0 ? item.ts : 0);
+            long hDurRaw = info.item != null && info.item.duration > 0 ? info.item.duration : 0;
+            if (hDurRaw <= 0 && info.item != null && info.item.runtime > 0) hDurRaw = info.item.runtime * 60L;
+            if (hDurRaw <= 0) hDurRaw = item.duration;
+            final long hDur = hDurRaw;
+            final int hPct = hDur > 0 ? Math.max(0, Math.min(100, (int) (hTs * 100 / hDur))) : 0;
+
+            // 左下文字列：标题锁版 → 元信息行 → CTA 行。决策三要素（是什么/多长/看没看过）全在第一屏
             LinearLayout heroText = new LinearLayout(this);
             heroText.setOrientation(LinearLayout.VERTICAL);
             heroText.setGravity(Gravity.BOTTOM | Gravity.START);
-            heroText.setPadding(dp(24), 0, dp(24), dp(22));
+            heroText.setPadding(dp(24), 0, dp(24), dp(34));
             heroText.setLayoutParams(new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT,
                     Gravity.BOTTOM));
@@ -1448,6 +1490,7 @@ public class HomeActivity extends AppCompatActivity {
             heroTitle.setShadowLayer(6, 0, 2, 0x99000000);
             heroText.addView(heroTitle);
 
+            // 元信息行：评分 · 年份 · 类型(中文) · 时长/总季集 —— 语义分组、单一来源、不再与下半屏重复
             LinearLayout heroMeta = new LinearLayout(this);
             heroMeta.setOrientation(LinearLayout.HORIZONTAL);
             heroMeta.setGravity(Gravity.CENTER_VERTICAL);
@@ -1458,53 +1501,73 @@ public class HomeActivity extends AppCompatActivity {
                 rating.setText("★ " + vote);
                 rating.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_caption));
                 rating.setTextColor(0xFFFFD479);
-                rating.setBackgroundColor(0x99000000);
-                rating.setPadding(dp(8), dp(2), dp(8), dp(2));
+                rating.setBackgroundResource(R.drawable.bg_chip);
+                rating.setPadding(dp(10), dp(3), dp(10), dp(3));
                 heroMeta.addView(rating);
+                View chipGap = new View(this);
+                chipGap.setLayoutParams(new LinearLayout.LayoutParams(dp(10), 1));
+                heroMeta.addView(chipGap);
             }
-            TextView shortMeta = new TextView(this);
             String date = info.item != null && info.item.releaseDate != null
                     ? info.item.releaseDate : (info.item != null ? info.item.airDate : null);
-            shortMeta.setText((date != null && !date.isEmpty() ? date + "  ·  " : "")
-                    + item.getCategoryLabel());
+            String hType = info.type != null ? info.type : item.type;
+            StringBuilder hm = new StringBuilder();
+            if (date != null && !date.isEmpty()) hm.append(date);
+            String typeZh = categoryZh(hType);
+            if (!typeZh.isEmpty()) { if (hm.length() > 0) hm.append("  ·  "); hm.append(typeZh); }
+            long runtimeSec = info.item != null && info.item.duration > 0 ? info.item.duration
+                    : (info.item != null ? info.item.runtime * 60L : item.runtime * 60L);
+            if ("Movie".equalsIgnoreCase(hType) || "Video".equalsIgnoreCase(hType)
+                    || "Episode".equalsIgnoreCase(hType)) {
+                if (runtimeSec > 0) { if (hm.length() > 0) hm.append("  ·  "); hm.append(formatDuration(runtimeSec)); }
+            } else if (info.item != null && info.item.numberOfSeasons > 0) {
+                if (hm.length() > 0) hm.append("  ·  ");
+                hm.append("共 ").append(info.item.numberOfSeasons).append(" 季");
+                if (info.item.numberOfEpisodes > 0) hm.append(" · ").append(info.item.numberOfEpisodes).append(" 集");
+            }
+            TextView shortMeta = new TextView(this);
+            shortMeta.setText(hm.toString());
             shortMeta.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_caption));
             shortMeta.setTextColor(c(R.color.text_secondary));
-            shortMeta.setPadding(dp(10), 0, 0, 0);
+            shortMeta.setShadowLayer(4, 0, 1, 0x99000000);
             heroMeta.addView(shortMeta);
             heroText.addView(heroMeta);
-            hero.addView(heroText);
 
-            // 右下角圆形次要操作：跳到选集 / 跳到简介（均为真实跳转）
-            LinearLayout actions = new LinearLayout(this);
-            actions.setOrientation(LinearLayout.HORIZONTAL);
-            actions.setGravity(Gravity.END);
-            FrameLayout.LayoutParams actionsLp = new FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
-                    Gravity.BOTTOM | Gravity.END);
-            actionsLp.setMargins(0, 0, dp(24), dp(22));
-            actions.setLayoutParams(actionsLp);
-            String[] actionLabels = {"选集", "简介"};
-            final String[] actionTags = {"episodes_section", "overview_section"};
-            for (int i = 0; i < actionLabels.length; i++) {
-                final String tag = actionTags[i];
-                Button b = new Button(this);
-                b.setText(actionLabels[i]);
-                b.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_caption));
-                b.setTextColor(c(R.color.text_primary));
-                b.setBackgroundResource(R.drawable.bg_circle);
-                b.setFocusable(true);
-                b.setMinWidth(0); b.setMinHeight(0);
-                b.setWidth(dp(64)); b.setHeight(dp(64));
-                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(64), dp(64));
-                lp.setMargins(dp(8), 0, 0, 0);
-                b.setLayoutParams(lp);
-                b.setOnClickListener(v -> {
-                    View target = content.findViewWithTag(tag);
-                    if (target != null) scroll.post(() -> scroll.smoothScrollTo(0, target.getTop() - dp(16)));
-                });
-                actions.addView(b);
-            }
-            // 本地收藏（不写服务器，明确提示）
+            // CTA 行：主行动（播放/继续播放）钉在图内 + 收藏幽灵键；进页焦点直达主行动（tvOS 惯例）
+            LinearLayout ctaRow = new LinearLayout(this);
+            ctaRow.setOrientation(LinearLayout.HORIZONTAL);
+            ctaRow.setGravity(Gravity.CENTER_VERTICAL);
+            ctaRow.setPadding(0, dp(18), 0, 0);
+
+            Button playBtn = new Button(this);
+            playBtn.setBackgroundResource(R.drawable.bg_play_white);
+            playBtn.setTextColor(0xFF121418);
+            playBtn.setFocusable(true);
+            playBtn.setFocusableInTouchMode(true);   // 触摸模式下允许程序化焦点（遥控器/触摸混用场景）
+            playBtn.setMinWidth(dp(196));
+            playBtn.setMinHeight(0);
+            playBtn.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_body));
+            playBtn.setAllCaps(false);
+            playBtn.setPadding(dp(26), 0, dp(26), 0);
+            playBtn.setText(hTs > 0
+                    ? "▶  继续播放  " + formatDuration(hTs) + " / " + formatDuration(hDur)
+                    : "▶  播放");
+            playBtn.setLayoutParams(new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, dp(52)));
+
+            final String pGuid = item.guid;
+            final String pTitle = item.title;
+            final String pTV = info.item != null && info.item.tvTitle != null ? info.item.tvTitle : "";
+            final String pPoster = item.poster;
+            final String pCat = item.getCategoryLabel();
+            final int pEp = item.episodeNumber;
+            final String pParentGuid = info.parentGuid != null && !info.parentGuid.isEmpty()
+                    ? info.parentGuid : item.parentGuid;
+            playBtn.setOnClickListener(v ->
+                    launchPlayer(pGuid, pTitle, pTV, pEp, pPoster, pCat, hTs, hDur, pParentGuid));
+            ctaRow.addView(playBtn);
+
+            // 本地收藏（不写服务器，明确提示）——与主行动同排，圆形幽灵键尺寸一致
             final String favKey = "fav_" + item.guid;
             Button fav = new Button(this);
             fav.setText(prefs.getBoolean(favKey, false) ? "♥" : "♡");
@@ -1512,9 +1575,10 @@ public class HomeActivity extends AppCompatActivity {
             fav.setTextColor(c(R.color.text_primary));
             fav.setBackgroundResource(R.drawable.bg_circle);
             fav.setFocusable(true);
+            fav.setFocusableInTouchMode(true);
             fav.setMinWidth(0); fav.setMinHeight(0);
-            LinearLayout.LayoutParams favLp = new LinearLayout.LayoutParams(dp(64), dp(64));
-            favLp.setMargins(dp(8), 0, 0, 0);
+            LinearLayout.LayoutParams favLp = new LinearLayout.LayoutParams(dp(52), dp(52));
+            favLp.setMargins(dp(12), 0, 0, 0);
             fav.setLayoutParams(favLp);
             fav.setOnClickListener(v -> {
                 boolean now = !prefs.getBoolean(favKey, false);
@@ -1523,14 +1587,35 @@ public class HomeActivity extends AppCompatActivity {
                 Toast.makeText(this, now ? "已加入本地收藏（不同步服务器）" : "已取消本地收藏",
                         Toast.LENGTH_SHORT).show();
             });
-            actions.addView(fav);
+            ctaRow.addView(fav);
 
-            hero.addView(actions);
+            heroText.addView(ctaRow);
+            hero.addView(heroText);
+
+            // 续播进度：钉在氛围图底边的细线（Netflix 式），旧按钮内双色块废弃
+            if (hPct > 0) {
+                View track = new View(this);
+                track.setLayoutParams(new FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, dp(4), Gravity.BOTTOM | Gravity.START));
+                track.setBackgroundColor(0x55FFFFFF);
+                hero.addView(track);
+                View bar = new View(this);
+                bar.setLayoutParams(new FrameLayout.LayoutParams(
+                        (int) (getResources().getDisplayMetrics().widthPixels * (hPct / 100.0f)),
+                        dp(4), Gravity.BOTTOM | Gravity.START));
+                bar.setBackgroundColor(0xFF2D6CDF);
+                hero.addView(bar);
+            }
 
             content.addView(hero);
             buildDetailContent(content, item, info, epTitle, series, epNum, pUrl, true);
             scroll.addView(content);
             moviesContainer.addView(scroll);
+
+            // 焦点直达主行动（进详情页第一落点 = Play）
+            playBtn.post(() -> {
+                if (!playBtn.requestFocus()) moviesContainer.post(() -> playBtn.requestFocus());
+            });
         } else {
             // ====== 竖屏：原布局 ======
             androidx.core.widget.NestedScrollView scrollView = new androidx.core.widget.NestedScrollView(this);
@@ -1567,21 +1652,9 @@ public class HomeActivity extends AppCompatActivity {
     private void buildDetailContent(LinearLayout content, PlayListItem item, PlayInfoResponse info,
                                      String epTitle, String series, int epNum, String pUrl,
                                      boolean heroMode) {
-        // 元数据卡片
-        LinearLayout metaCard = new LinearLayout(this);
-        metaCard.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        metaCard.setOrientation(LinearLayout.VERTICAL);
-        metaCard.setBackgroundResource(R.drawable.bg_card);
-        metaCard.setPadding(16, 16, 16, 16);
-
         String typeStr = info.type != null ? info.type : item.type;
-        String typeLabel = "电影";
-        if ("Episode".equals(typeStr)) typeLabel = "剧集";
-        else if ("TV".equals(typeStr)) typeLabel = "剧集";
-        else if ("Video".equals(typeStr)) typeLabel = "视频";
-
         int runtime = info.item != null ? info.item.runtime : item.runtime;
+
         // 评分（直接取 PlayListItem 的 vote_average，保留一位小数）
         String voteRaw = item.voteAverage;
         Log.d("Detail", "vote_average from item=" + voteRaw
@@ -1595,8 +1668,48 @@ public class HomeActivity extends AppCompatActivity {
             } catch (NumberFormatException ignored) {}
         }
 
-        // 标题（Hero 模式下由顶部 Hero 区展示，这里不重复）
-        if (!heroMode) {
+        // 日期/时长单一来源（hero 元信息行与竖屏日志串共用取数规则，去重）
+        String mDate = info.item != null && info.item.releaseDate != null
+                ? info.item.releaseDate : (info.item != null ? info.item.airDate : null);
+        long durSec = info.item != null && info.item.duration > 0 ? info.item.duration
+                : (runtime > 0 ? runtime * 60L : item.duration);
+
+        if (heroMode) {
+            // 横屏：标题/评分/年份/类型/时长已在 hero 元信息行。这里只补剧集语境 + 技术徽章（chip 形态，不再拼日志串）
+            LinearLayout chipRow = new LinearLayout(this);
+            chipRow.setLayoutParams(new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            chipRow.setOrientation(LinearLayout.HORIZONTAL);
+            if (info.item != null) {
+                if (info.item.tvTitle != null && !info.item.tvTitle.isEmpty())
+                    chipRow.addView(makeInfoChip(info.item.tvTitle));
+                if (info.item.parentTitle != null && !info.item.parentTitle.isEmpty())
+                    chipRow.addView(makeInfoChip(info.item.parentTitle));
+                if (info.item.episodeNumber > 0)
+                    chipRow.addView(makeInfoChip("第 " + info.item.episodeNumber + " 集"));
+            }
+            if (info.item != null && info.item.mediaStream != null) {
+                // 每类只取首个徽章（与旧日志串取数一致），保证 chip 行单行不溢出
+                if (info.item.mediaStream.resolutions != null && !info.item.mediaStream.resolutions.isEmpty())
+                    chipRow.addView(makeInfoChip(info.item.mediaStream.resolutions.get(0)));
+                if (info.item.mediaStream.audioType != null && !info.item.mediaStream.audioType.isEmpty())
+                    chipRow.addView(makeInfoChip(info.item.mediaStream.audioType.get(0)));
+                if (info.item.mediaStream.colorRangeType != null && !info.item.mediaStream.colorRangeType.isEmpty())
+                    chipRow.addView(makeInfoChip(info.item.mediaStream.colorRangeType.get(0)));
+            }
+            if (chipRow.getChildCount() > 0) {
+                content.addView(chipRow);
+                content.addView(makeSpacer(12));
+            }
+        } else {
+            // 竖屏（手机兜底）：保留标题 + 单串元信息卡
+            LinearLayout metaCard = new LinearLayout(this);
+            metaCard.setLayoutParams(new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            metaCard.setOrientation(LinearLayout.VERTICAL);
+            metaCard.setBackgroundResource(R.drawable.bg_card);
+            metaCard.setPadding(16, 16, 16, 16);
+
             String bigTitle = detailTitle(item, info, epTitle, series, epNum);
             TextView titleBig = new TextView(this);
             titleBig.setLayoutParams(new LinearLayout.LayoutParams(
@@ -1606,54 +1719,34 @@ public class HomeActivity extends AppCompatActivity {
             titleBig.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_headline_large));
             titleBig.setTypeface(Typeface.DEFAULT_BOLD);
             metaCard.addView(titleBig);
-        }
 
-        // 元数据行
-        TextView meta = new TextView(this);
-        meta.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        meta.setPadding(0, 8, 0, 0);
-        StringBuilder mt = new StringBuilder(typeLabel);
+            TextView meta = new TextView(this);
+            meta.setLayoutParams(new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            meta.setPadding(0, 8, 0, 0);
+            StringBuilder mt = new StringBuilder(categoryZh(typeStr));
+            if (info.item != null) {
+                if (info.item.tvTitle != null && !info.item.tvTitle.isEmpty()) mt.append("  ").append(info.item.tvTitle);
+                if (info.item.parentTitle != null && !info.item.parentTitle.isEmpty()) mt.append("  ").append(info.item.parentTitle);
+                if (info.item.episodeNumber > 0) mt.append("  第").append(info.item.episodeNumber).append("集");
+            }
+            if (durSec > 0) mt.append("  ·  ").append(formatDuration(durSec));
+            if (voteLabel != null) mt.append("  ·  ⭐").append(voteLabel);
+            if (info.item != null && info.item.mediaStream != null) {
+                if (info.item.mediaStream.resolutions != null && !info.item.mediaStream.resolutions.isEmpty())
+                    mt.append("  ·  ").append(info.item.mediaStream.resolutions.get(0));
+                if (info.item.mediaStream.audioType != null && !info.item.mediaStream.audioType.isEmpty())
+                    mt.append("  ·  ").append(info.item.mediaStream.audioType.get(0));
+            }
+            if (mDate != null && !mDate.isEmpty()) mt.append("  ·  ").append(mDate);
+            meta.setText(mt.toString());
+            meta.setTextColor(c(R.color.text_secondary));
+            meta.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_body));
+            metaCard.addView(meta);
 
-        // 剧集信息: tv_title + parent_title
-        if (info.item != null && info.item.tvTitle != null && !info.item.tvTitle.isEmpty()) {
-            mt.append("  ").append(info.item.tvTitle);
+            content.addView(metaCard);
+            content.addView(makeSpacer(12));
         }
-        if (info.item != null && info.item.parentTitle != null && !info.item.parentTitle.isEmpty()) {
-            mt.append("  ").append(info.item.parentTitle);
-        }
-        if (info.item != null && info.item.episodeNumber > 0) {
-            mt.append("  第").append(info.item.episodeNumber).append("集");
-        }
-        if (runtime > 0) {
-            long durSec = info.item != null && info.item.duration > 0 ? info.item.duration : runtime * 60L;
-            mt.append("  ·  ").append(formatDuration(durSec));
-        }
-        if (voteLabel != null && !heroMode) mt.append("  ·  ⭐").append(voteLabel);
-        // 分辨率
-        if (info.item != null && info.item.mediaStream != null
-                && info.item.mediaStream.resolutions != null
-                && !info.item.mediaStream.resolutions.isEmpty()) {
-            mt.append("  ·  ").append(info.item.mediaStream.resolutions.get(0));
-        }
-        // 音轨
-        if (info.item != null && info.item.mediaStream != null
-                && info.item.mediaStream.audioType != null
-                && !info.item.mediaStream.audioType.isEmpty()) {
-            mt.append("  ·  ").append(info.item.mediaStream.audioType.get(0));
-        }
-        // 日期
-        String date = info.item != null && info.item.releaseDate != null
-                ? info.item.releaseDate : (info.item != null ? info.item.airDate : null);
-        if (date != null && !date.isEmpty()) mt.append("  ·  ").append(date);
-
-        meta.setText(mt.toString());
-        meta.setTextColor(c(R.color.text_secondary));
-        meta.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_body));
-        metaCard.addView(meta);
-
-        content.addView(metaCard);
-        content.addView(makeSpacer(12));
 
         // 简介卡片（限制最大高度，防过长遮挡播放按钮）
         String overview = info.item != null && info.item.overview != null
@@ -1677,6 +1770,7 @@ public class HomeActivity extends AppCompatActivity {
             ovScroll.setLayoutParams(new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, heroMode ? dp(112) : 300));
             ovScroll.setFocusable(true);
+            ovScroll.setFocusableInTouchMode(true);
             ovScroll.setDescendantFocusability(ViewGroup.FOCUS_BEFORE_DESCENDANTS);
             ovScroll.setOnFocusChangeListener((v, hasFocus) ->
                     v.setBackgroundColor(hasFocus ? c(R.color.bg_chip_focus) : c(R.color.transparent)));
@@ -1688,23 +1782,33 @@ public class HomeActivity extends AppCompatActivity {
             ov.setTextColor(c(R.color.text_secondary));
             ov.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_body));
             ov.setLineSpacing(6, 1);
-            ovScroll.addView(ov);
-            overviewCard.addView(ovScroll);
             if (heroMode) {
+                // 横屏：限行长（CJK 阅读 measure ≤40 字）+ 4 行 clamp + 就地真展开（不再定高裁断）
+                ov.setMaxEms(40);
+                ov.setMaxLines(4);
+                ov.setEllipsize(TextUtils.TruncateAt.END);
+                overviewCard.addView(ov);
                 TextView expand = new TextView(this);
                 expand.setText("展开 ▾");
                 expand.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_caption));
                 expand.setTextColor(c(R.color.colorPrimary));
                 expand.setPadding(0, dp(6), 0, 0);
                 expand.setFocusable(true);
+                expand.setFocusableInTouchMode(true);
                 final boolean[] expanded = {false};
                 expand.setOnClickListener(v -> {
                     expanded[0] = !expanded[0];
-                    ovScroll.setLayoutParams(new LinearLayout.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT, expanded[0] ? dp(300) : dp(112)));
+                    ov.setMaxLines(expanded[0] ? Integer.MAX_VALUE : 4);
                     expand.setText(expanded[0] ? "收起 ▴" : "展开 ▾");
                 });
                 overviewCard.addView(expand);
+                // 只有真被裁断时才显示“展开”——没裁断却给个展开键是骗人的
+                ov.post(() -> {
+                    if (!expanded[0]) expand.setVisibility(ov.getLineCount() > 4 ? View.VISIBLE : View.GONE);
+                });
+            } else {
+                ovScroll.addView(ov);
+                overviewCard.addView(ovScroll);
             }
             content.addView(overviewCard);
             content.addView(makeSpacer(12));
@@ -1739,6 +1843,8 @@ public class HomeActivity extends AppCompatActivity {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         playFrame.setMinimumHeight(dp(56));
 
+        // 播放按钮：heroMode 下主行动已钉在 hero 内，这里不再重复一个全宽大按钮（一套页面一种主行动）
+        if (!heroMode) {
         // 圆角背景（进度条用两层：蓝色 + 灰色）
         if (!heroMode && progressPct > 0) {
             LinearLayout progressLayer = new LinearLayout(this);
@@ -1806,47 +1912,19 @@ public class HomeActivity extends AppCompatActivity {
         });
         playFrame.addView(playBtn);
         content.addView(playFrame);
+        }
 
         // Episode 类型 → 先加载季列表，点击某季后加载该季剧集
         if (item.guid != null && !item.guid.isEmpty()) {
             content.addView(makeSpacer(16));
-            loadSeasons(content, item.guid, item, playBtn, pTs);
+            loadSeasons(content, item.guid, item, pTs);
         }
 
     }
 
-    /** 加载剧集列表并按季分组 */
-    private void loadEpisodes(final LinearLayout content, final String parentGuid, final PlayListItem item,
-                              final Button playBtn, final long pTs, final String historyEpGuid) {
-        apiManager.getApi().getEpisodeList(parentGuid).enqueue(new Callback<ApiResponse<List<PlayListItem>>>() {
-            @Override
-            public void onResponse(Call<ApiResponse<List<PlayListItem>>> call,
-                                   Response<ApiResponse<List<PlayListItem>>> response) {
-                if (!response.isSuccessful() || response.body() == null || response.body().code != 0
-                        || response.body().data == null || response.body().data.isEmpty()) return;
-                List<PlayListItem> episodes = response.body().data;
-                showSeasons(content, episodes, item);
-                // 从剧集列表找到历史记录对应的那一集，用它的精确时长覆盖按钮
-                if (historyEpGuid != null) {
-                    for (PlayListItem ep : episodes) {
-                        if (ep.guid.equals(historyEpGuid) && ep.duration > 0) {
-                            long epDur = ep.duration;
-                            Log.d("Detail", "剧集列表匹配到历史剧集, 时长: " + formatDuration(epDur));
-                            playBtn.setText("▶  继续播放\n" + formatDuration(pTs) + " / " + formatDuration(epDur));
-                            // 通过 setTag 把修正后的时长传给点击监听
-                            playBtn.setTag(epDur);
-                            break;
-                        }
-                    }
-                }
-            }
-            @Override public void onFailure(Call<ApiResponse<List<PlayListItem>>> call, Throwable t) {}
-        });
-    }
-
-    /** 加载季列表（从 season/list 接口获取） */
+    /** 加载季列表（season/list），渲染为季 pill 切换行；点击某季进入该季剧集页（EPISODES 帧） */
     private void loadSeasons(final LinearLayout content, final String itemGuid, final PlayListItem item,
-                              final Button playBtn, final long pTs) {
+                              final long pTs) {
         TextView h = new TextView(this);
         h.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -1865,46 +1943,33 @@ public class HomeActivity extends AppCompatActivity {
                 if (!response.isSuccessful() || response.body() == null || response.body().code != 0
                         || response.body().data == null || response.body().data.isEmpty()) return;
                 List<PlayListItem> seasons = response.body().data;
+
+                // 季 pill 切换行（Apple tvOS 式）：当前高亮，点击进该季剧集页。
+                // 不用 HorizontalScrollView 包裹——实测 HSV 会吞掉子 View 的 touch click（焦点能进、点击不触发）
+                LinearLayout pills = new LinearLayout(HomeActivity.this);
+                pills.setOrientation(LinearLayout.HORIZONTAL);
+                int curSeason = item.seasonNumber > 0 ? item.seasonNumber : -1;
                 for (final PlayListItem season : seasons) {
-                    LinearLayout card = new LinearLayout(HomeActivity.this);
-                    card.setOrientation(LinearLayout.HORIZONTAL);
-                    card.setBackgroundResource(R.drawable.bg_media_card);
-        focusScale(card);
-                    card.setPadding(16, 18, 16, 18);
-                    card.setFocusable(true);
-                    card.setMinimumHeight(56);
-
-                    LinearLayout tc = new LinearLayout(HomeActivity.this);
-                    tc.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
-                    tc.setOrientation(LinearLayout.VERTICAL);
-                    tc.setGravity(Gravity.CENTER_VERTICAL);
-                    TextView st = new TextView(HomeActivity.this);
-                    st.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_body));
-                    st.setTextColor(c(R.color.text_primary));
-                    st.setText("第 " + season.seasonNumber + " 季");
-                    tc.addView(st);
-                    TextView ss = new TextView(HomeActivity.this);
-                    ss.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_caption));
-                    ss.setTextColor(c(R.color.text_hint));
-                    ss.setText(season.localNumberOfEpisodes > 0 ? season.localNumberOfEpisodes + " 集" : "");
-                    tc.addView(ss);
-                    card.addView(tc);
-
-                    TextView ar = new TextView(HomeActivity.this);
-                    ar.setLayoutParams(new LinearLayout.LayoutParams(
-                            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-                    ar.setText(">");
-                    ar.setTextColor(c(R.color.text_hint));
-                    ar.setTextSize(20);
-                    ar.setGravity(Gravity.CENTER);
-                    ar.setPadding(8, 0, 0, 0);
-                    card.addView(ar);
-
                     final int sn = season.seasonNumber > 0 ? season.seasonNumber : 1;
-                    card.setOnClickListener(v -> navigateEpisodesFetch(season.guid, sn, item));
-                    content.addView(card);
-                    content.addView(makeSpacer(12));
+                    Button p = new Button(HomeActivity.this);
+                    p.setText("第 " + sn + " 季"
+                            + (season.localNumberOfEpisodes > 0 ? " · " + season.localNumberOfEpisodes + "集" : ""));
+                    p.setAllCaps(false);
+                    p.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_caption));
+                    p.setTextColor(sn == curSeason ? c(R.color.colorPrimary) : c(R.color.text_primary));
+                    p.setBackgroundResource(R.drawable.bg_chip);
+                    p.setFocusable(true);
+                    p.setFocusableInTouchMode(true);
+                    p.setMinWidth(0); p.setMinHeight(0);
+                    p.setPadding(dp(20), 0, dp(20), 0);
+                    LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.WRAP_CONTENT, dp(46));
+                    lp.setMargins(0, 0, dp(10), 0);
+                    p.setLayoutParams(lp);
+                    p.setOnClickListener(v -> navigateEpisodesFetch(season.guid, sn, item));
+                    pills.addView(p);
                 }
+                content.addView(pills);
             }
             @Override public void onFailure(Call<ApiResponse<List<PlayListItem>>> call, Throwable t) {}
         });
@@ -1950,72 +2015,7 @@ public class HomeActivity extends AppCompatActivity {
         });
     }
 
-    /** 显示季列表 */
-
-    private void showSeasons(LinearLayout content, List<PlayListItem> episodes, PlayListItem item) {
-        Map<Integer, List<PlayListItem>> map = new HashMap<>();
-        for (PlayListItem ep : episodes) {
-            int sn = ep.seasonNumber > 0 ? ep.seasonNumber : 1;
-            if (!map.containsKey(sn)) map.put(sn, new ArrayList<PlayListItem>());
-            map.get(sn).add(ep);
-        }
-
-        TextView h = new TextView(this);
-        h.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        h.setPadding(0, 14, 0, 14);
-        h.setText("选择剧集");
-        h.setTag("episodes_section");
-        h.setTextColor(c(R.color.text_primary));
-        h.setTextSize(22);
-        h.setTypeface(Typeface.DEFAULT_BOLD);
-        content.addView(h);
-
-        List<Integer> nums = new ArrayList<>(map.keySet());
-        java.util.Collections.sort(nums);
-        for (final int sn : nums) {
-            final List<PlayListItem> eps = map.get(sn);
-            LinearLayout card = new LinearLayout(this);
-            card.setOrientation(LinearLayout.HORIZONTAL);
-            card.setBackgroundResource(R.drawable.bg_media_card);
-        focusScale(card);
-            card.setPadding(16, 18, 16, 18);
-            card.setFocusable(true);
-            card.setMinimumHeight(56);
-
-            LinearLayout tc = new LinearLayout(this);
-            tc.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
-            tc.setOrientation(LinearLayout.VERTICAL);
-            tc.setGravity(Gravity.CENTER_VERTICAL);
-            TextView st = new TextView(this); st.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_body)); st.setTextColor(c(R.color.text_primary));
-            st.setText("第 " + sn + " 季"); tc.addView(st);
-            TextView ss = new TextView(this); ss.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_caption)); ss.setTextColor(c(R.color.text_hint));
-            ss.setText(eps.size() + " 集"); tc.addView(ss);
-            card.addView(tc);
-
-            TextView ar = new TextView(this);
-            ar.setLayoutParams(new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-            ar.setText(">"); ar.setTextColor(c(R.color.text_hint)); ar.setTextSize(20);
-            ar.setGravity(Gravity.CENTER); ar.setPadding(8, 0, 0, 0);
-            card.addView(ar);
-
-            card.setOnClickListener(v -> navigateEpisodes(eps, sn, item));
-            content.addView(card);
-            content.addView(makeSpacer(6));
-        }
-    }
-
-    /** 进入某季剧集页（列表已在手，直接压栈渲染） */
-    private void navigateEpisodes(List<PlayListItem> eps, int sn, PlayListItem original) {
-        NavFrame f = new NavFrame(NAV_EPISODES);
-        f.list = eps; f.seasonNumber = sn; f.item = original;
-        navStack.push(f);
-        showEpisodes(eps, sn, original);
-    }
-
-    /** 显示某季剧集 */
-
+    /** 显示某季剧集（EPISODES 帧的缓存重绘也走这里） */
     private void showEpisodes(List<PlayListItem> eps, int sn, PlayListItem original) {
         moviesContainer.removeAllViews();
 
