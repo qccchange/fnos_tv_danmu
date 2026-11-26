@@ -65,6 +65,8 @@ public class PlayInfoResponse {
 
         @SerializedName("is_favorite")
         public int isFavorite;
+        @SerializedName("content_ratings")
+        public String contentRatings;
 
         public List<Integer> genres;
         @SerializedName("production_countries")

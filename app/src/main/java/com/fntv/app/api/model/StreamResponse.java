@@ -93,6 +93,15 @@ public class StreamResponse {
         public String pixFmt;
         @SerializedName("bits_per_raw_sample")
         public String bitsPerRawSample;
+        @SerializedName("resolution_type")
+        public String resolutionType;
+        @SerializedName("color_range_type")
+        public String colorRangeType;
+        @SerializedName("display_aspect_ratio")
+        public String displayAspectRatio;
+        public String wrapper;
+        @SerializedName("is_bluray")
+        public Boolean isBluray;
         public int duration;
     }
 

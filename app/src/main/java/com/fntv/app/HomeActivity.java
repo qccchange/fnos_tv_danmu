@@ -1241,6 +1241,262 @@ public class HomeActivity extends AppCompatActivity {
         return t;
     }
 
+    // ==================== 详情页·媒体信息卡（getStream 二级规格，懒载回填） ====================
+
+    private static final java.util.HashMap<String, String> LANG_ZH = new java.util.HashMap<String, String>();
+    private static final java.util.HashMap<String, String> AUDIO_CODEC_ZH = new java.util.HashMap<String, String>();
+    private static final java.util.HashMap<String, String> SUB_CODEC_ZH = new java.util.HashMap<String, String>();
+    private static final java.util.HashMap<String, String> COUNTRY_ZH = new java.util.HashMap<String, String>();
+    static {
+        String[][] langs = {
+                {"chi", "中文"}, {"zho", "中文"}, {"chs", "中文简"}, {"cht", "中繁"}, {"cn", "中文"}, {"zh", "中文"}, {"yue", "粤语"},
+                {"eng", "英文"}, {"en", "英文"}, {"jpn", "日文"}, {"ja", "日文"}, {"kor", "韩文"}, {"ko", "韩文"},
+                {"fra", "法文"}, {"fre", "法文"}, {"fr", "法文"}, {"deu", "德文"}, {"ger", "德文"}, {"de", "德文"},
+                {"spa", "西班牙文"}, {"es", "西班牙文"}, {"ita", "意大利文"}, {"it", "意大利文"}, {"rus", "俄文"}, {"ru", "俄文"},
+                {"por", "葡文"}, {"nld", "荷兰文"}, {"dut", "荷兰文"}, {"dan", "丹麦文"}, {"swe", "瑞典文"}, {"sv", "瑞典文"},
+                {"pol", "波兰文"}, {"tur", "土耳其文"}, {"tha", "泰文"}, {"ind", "印尼文"}, {"vie", "越南文"}, {"hin", "印地文"}
+        };
+        for (String[] kv : langs) LANG_ZH.put(kv[0], kv[1]);
+        String[][] acodecs = {
+                {"ac3", "AC3"}, {"eac3", "E-AC3"}, {"dts", "DTS"}, {"dts-hd", "DTS-HD"}, {"dtshd", "DTS-HD"}, {"dtsx", "DTS:X"},
+                {"truehd", "TrueHD"}, {"aac", "AAC"}, {"mp3", "MP3"}, {"flac", "FLAC"}, {"opus", "Opus"}, {"vorbis", "Vorbis"}
+        };
+        for (String[] kv : acodecs) AUDIO_CODEC_ZH.put(kv[0], kv[1]);
+        String[][] scopecs = {
+                {"hdmv_pgs_subtitle", "PGS"}, {"pgs", "PGS"}, {"ass", "ASS"}, {"ssa", "ASS"}, {"subrip", "SRT"}, {"srt", "SRT"},
+                {"dvb_subtitle", "DVB"}, {"webvtt", "VTT"}
+        };
+        for (String[] kv : scopecs) SUB_CODEC_ZH.put(kv[0], kv[1]);
+        String[][] countries = {
+                {"cn", "中国"}, {"hk", "中国香港"}, {"tw", "中国台湾"}, {"us", "美国"}, {"gb", "英国"}, {"uk", "英国"},
+                {"jp", "日本"}, {"kr", "韩国"}, {"fr", "法国"}, {"de", "德国"}, {"it", "意大利"}, {"es", "西班牙"},
+                {"in", "印度"}, {"ru", "俄罗斯"}, {"ca", "加拿大"}, {"au", "澳大利亚"}, {"nz", "新西兰"}, {"se", "瑞典"},
+                {"dk", "丹麦"}, {"nl", "荷兰"}, {"be", "比利时"}, {"at", "奥地利"}, {"ch", "瑞士"}, {"pl", "波兰"},
+                {"ie", "爱尔兰"}, {"pt", "葡萄牙"}, {"no", "挪威"}, {"fi", "芬兰"}, {"mx", "墨西哥"}, {"br", "巴西"},
+                {"th", "泰国"}, {"id", "印度尼西亚"}, {"sg", "新加坡"}, {"my", "马来西亚"}, {"vn", "越南"}, {"il", "以色列"},
+                {"tr", "土耳其"}, {"za", "南非"}, {"eg", "埃及"}
+        };
+        for (String[] kv : countries) COUNTRY_ZH.put(kv[0], kv[1]);
+    }
+
+    private static String langZh(String code) {
+        if (code == null) return null;
+        String k = code.trim().toLowerCase(java.util.Locale.US);
+        if (k.isEmpty() || k.equals("und") || k.equals("zxx") || k.equals("mul")) return null;   // 未定义/无语言：不给噪音
+        String v = LANG_ZH.get(k);
+        return v != null ? v : code.trim();
+    }
+
+    private static String codecDisplay(String codecName, java.util.Map<String, String> alias) {
+        if (codecName == null || codecName.trim().isEmpty()) return null;
+        String v = alias.get(codecName.trim().toLowerCase(java.util.Locale.US));
+        return v != null ? v : codecName.trim().toUpperCase(java.util.Locale.US);
+    }
+
+    private static String joinColl(String sep, java.util.Collection<String> items) {
+        StringBuilder sb = new StringBuilder();
+        for (String it : items) {
+            if (it == null || it.isEmpty()) continue;
+            if (sb.length() > 0) sb.append(sep);
+            sb.append(it);
+        }
+        return sb.length() > 0 ? sb.toString() : null;
+    }
+
+    private static String joinSkipEmpty(String sep, String... parts) {
+        StringBuilder sb = new StringBuilder();
+        for (String p : parts) {
+            if (p == null || p.isEmpty()) continue;
+            if (sb.length() > 0) sb.append(sep);
+            sb.append(p);
+        }
+        return sb.length() > 0 ? sb.toString() : null;
+    }
+
+    /** 字节数 → 人类可读容量 */
+    private static String formatSize(long bytes) {
+        if (bytes <= 0) return null;
+        if (bytes >= 1024L * 1024 * 1024)
+            return String.format(java.util.Locale.US, bytes >= 10737418240L ? "%.0f GB" : "%.1f GB", bytes / 1073741824.0);
+        if (bytes >= 1024L * 1024) return String.format(java.util.Locale.US, "%.0f MB", bytes / 1048576.0);
+        return String.format(java.util.Locale.US, "%.0f KB", bytes / 1024.0);
+    }
+
+    private static String formatMbps(int bps) {
+        return bps > 0 ? String.format(java.util.Locale.US, "%.1f Mbps", bps / 1000000.0) : null;
+    }
+
+    /** 文字是否真被裁断：layout 末行带省略才算——数行数判不出裁断 */
+    private static boolean isEllipsized(TextView tv) {
+        android.text.Layout layout = tv.getLayout();
+        return layout != null && layout.getLineCount() > 0
+                && layout.getEllipsisCount(layout.getLineCount() - 1) > 0;
+    }
+
+    /** 媒体信息行：定宽标签列 + 单行值（宪法：text_hint 标签 / text_secondary 值 / caption+body 刻度） */
+    private LinearLayout makeSpecRow(String label, String value, boolean keepTail) {
+        LinearLayout row = new LinearLayout(this);
+        row.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setPadding(0, dp(5), 0, 0);
+        TextView l = new TextView(this);
+        l.setLayoutParams(new LinearLayout.LayoutParams(dp(52), ViewGroup.LayoutParams.WRAP_CONTENT));
+        l.setText(label);
+        l.setTextColor(c(R.color.text_hint));
+        l.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_caption));
+        TextView v = new TextView(this);
+        v.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        v.setText(value);
+        v.setTextColor(c(R.color.text_secondary));
+        v.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_body));
+        v.setMaxLines(1);
+        v.setEllipsize(keepTail ? TextUtils.TruncateAt.MIDDLE : TextUtils.TruncateAt.END);   // 文件名保留扩展名
+        row.addView(l);
+        row.addView(v);
+        return row;
+    }
+
+    /** 媒体信息卡：占位即出（防布局跳动），getStream 回填后 180ms 淡入；失败整卡淡出移除 */
+    private void loadMediaSpecCard(final LinearLayout content, final String mediaGuid) {
+        final LinearLayout card = new LinearLayout(this);
+        card.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setBackgroundResource(R.drawable.bg_card);
+        card.setTag("media_spec_section");
+        // hero 之下原本没有任何焦点落点（展开键裁断判定修复后才出现）——卡片必须可达，否则整页滚不动
+        card.setFocusable(true);
+        card.setFocusableInTouchMode(true);
+        focusScale(card);
+        card.setPadding(16, 16, 16, 16);
+        TextView label = new TextView(this);
+        label.setText("媒体信息");
+        label.setTextColor(c(R.color.text_hint));
+        label.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_caption));
+        card.addView(label);
+        final LinearLayout rows = new LinearLayout(this);
+        rows.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        rows.setOrientation(LinearLayout.VERTICAL);
+        TextView loading = new TextView(this);
+        loading.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        loading.setPadding(0, dp(5), 0, 0);
+        loading.setText("读取中…");
+        loading.setTextColor(c(R.color.text_hint));
+        loading.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_body));
+        rows.addView(loading);
+        card.addView(rows);
+        final View spacer = makeSpacer(12);
+        content.addView(card);
+        content.addView(spacer);
+
+        Map<String, Object> body = new HashMap<>();
+        Map<String, Object> header = new HashMap<>();
+        header.put("User-Agent", new String[]{"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"});
+        body.put("header", header);
+        body.put("media_guid", mediaGuid);
+        body.put("level", 1);
+        String account = prefs.getString("user", "video");
+        try {
+            java.security.MessageDigest md = java.security.MessageDigest.getInstance("MD5");
+            byte[] digest = md.digest(account.getBytes("UTF-8"));
+            StringBuilder sb = new StringBuilder();
+            for (byte b : digest) sb.append(String.format("%02x", b & 0xff));
+            body.put("ip", sb.toString());
+        } catch (Exception e) {
+            body.put("ip", "");
+        }
+        body.put("nonce", String.valueOf(100000 + (int) (Math.random() * 900000)));
+
+        Runnable dismiss = () -> {
+            card.animate().alpha(0f).setDuration(150).withEndAction(() -> {
+                content.removeView(card);
+                content.removeView(spacer);
+            }).start();
+        };
+        apiManager.getApi().getStream(body).enqueue(new Callback<ApiResponse<StreamResponse>>() {
+            @Override
+            public void onResponse(Call<ApiResponse<StreamResponse>> call,
+                                   Response<ApiResponse<StreamResponse>> response) {
+                java.util.List<String[]> spec = null;
+                if (response.isSuccessful() && response.body() != null && response.body().code == 0
+                        && response.body().data != null)
+                    spec = buildMediaSpecRows(response.body().data);
+                if (spec == null || spec.isEmpty()) { dismiss.run(); return; }
+                rows.removeAllViews();
+                for (String[] rw : spec) rows.addView(makeSpecRow(rw[0], rw[1], "f".equals(rw[2])));
+                rows.setAlpha(0f);
+                rows.animate().alpha(1f).setDuration(180).start();
+            }
+            @Override public void onFailure(Call<ApiResponse<StreamResponse>> call, Throwable t) { dismiss.run(); }
+        });
+    }
+
+    /** 从 stream 响应提炼规格行（无数据的行直接不出——缺失不是噪音） */
+    private java.util.List<String[]> buildMediaSpecRows(StreamResponse st) {
+        java.util.List<String[]> out = new java.util.ArrayList<>();
+        StreamResponse.VideoStreamInfo v = st.videoStream;
+        if (v != null) {
+            String codec = codecDisplay(v.codecName, java.util.Collections.<String, String>emptyMap());
+            if (codec != null && v.profile != null && !v.profile.isEmpty()) codec += " " + v.profile;
+            String res = v.width > 0 && v.height > 0 ? v.width + "×" + v.height : null;
+            String fps = v.rFrameRate != null ? v.rFrameRate.replace(" fps", "fps") : null;
+            String val = joinSkipEmpty(" · ", codec, res, fps, v.colorRangeType);
+            if (val != null) out.add(new String[]{"视频", val, "e"});
+        }
+        if (st.audioStreams != null && !st.audioStreams.isEmpty()) {
+            StringBuilder tracks = new StringBuilder();
+            java.util.LinkedHashSet<String> codecs = new java.util.LinkedHashSet<>();
+            for (StreamResponse.AudioStreamInfo a : st.audioStreams) {
+                String layout = a.channelLayout != null ? a.channelLayout.replace("(side)", "").trim() : "";
+                if (layout.isEmpty() && a.channels > 0)
+                    layout = a.channels == 2 ? "2.0" : a.channels == 6 ? "5.1" : a.channels == 8 ? "7.1" : String.valueOf(a.channels);
+                String cd = codecDisplay(a.codecName, AUDIO_CODEC_ZH);
+                if (cd != null) codecs.add(cd);
+                String one = joinSkipEmpty(" ", langZh(a.language), layout, a.audioType);
+                if (one == null) continue;
+                if (tracks.length() > 0) tracks.append("、");
+                tracks.append(one);
+            }
+            if (tracks.length() > 0) {
+                String codecGroup = codecs.isEmpty() ? null : joinColl("、", codecs);
+                String val = joinSkipEmpty(" · ", codecGroup, tracks.toString(),
+                        st.audioStreams.size() > 1 ? st.audioStreams.size() + " 条" : null);
+                out.add(new String[]{"音频", val, "e"});
+            }
+        }
+        if (st.subtitleStreams != null && !st.subtitleStreams.isEmpty()) {
+            java.util.LinkedHashSet<String> codecs = new java.util.LinkedHashSet<>();
+            StringBuilder tracks = new StringBuilder();
+            for (StreamResponse.SubtitleStreamInfo sub : st.subtitleStreams) {
+                String cd = codecDisplay(sub.codecName, SUB_CODEC_ZH);
+                if (cd != null) codecs.add(cd);
+                String lang = langZh(sub.language);
+                String one = lang != null ? (sub.title != null && !sub.title.isEmpty() ? lang + "·" + sub.title : lang)
+                        : (sub.title != null && !sub.title.isEmpty() ? sub.title : null);
+                if (one == null) continue;
+                if (tracks.length() > 0) tracks.append("、");
+                tracks.append(one);
+            }
+            String val = joinSkipEmpty(" · ", joinColl("、", codecs),
+                    tracks.length() > 0 ? tracks.toString() : null,
+                    st.subtitleStreams.size() > 1 ? st.subtitleStreams.size() + " 条" : null);
+            if (val != null) out.add(new String[]{"字幕", val, "e"});
+        }
+        String size = st.fileStream != null ? formatSize(st.fileStream.size) : null;
+        String bps = v != null ? formatMbps(v.bps) : null;
+        String vol = joinSkipEmpty(" · ", size, bps != null ? "码率 " + bps : null);
+        if (vol != null) out.add(new String[]{"容量", vol, "e"});
+        String bluray = v != null && Boolean.TRUE.equals(v.isBluray) ? "蓝光原盘" : null;
+        String fn = st.fileStream != null ? st.fileStream.fileName : null;
+        String fileRow = joinSkipEmpty(" · ", codecDisplay(v != null ? v.wrapper : null,
+                java.util.Collections.<String, String>emptyMap()), bluray, fn);
+        if (fileRow != null) out.add(new String[]{"文件", fileRow, "f"});
+        return out;
+    }
+
     /** 详情页大标题 */
     private String detailTitle(PlayListItem item, PlayInfoResponse info, String epTitle, String series, int epNum) {
         String t = epTitle != null ? epTitle : "";
@@ -1254,6 +1510,10 @@ public class HomeActivity extends AppCompatActivity {
 
     private void buildDetailPage(PlayListItem item, PlayInfoResponse info) {
         moviesContainer.removeAllViews();
+        // 详情与概览共用面板 ScrollView：清空后复位到顶部，避免继承概览的滚动位置
+        if (moviesContainer.getParent() instanceof android.widget.ScrollView) {
+            ((android.widget.ScrollView) moviesContainer.getParent()).scrollTo(0, 0);
+        }
 
         boolean isLandscape = getResources().getConfiguration().orientation
                 == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
@@ -1279,10 +1539,9 @@ public class HomeActivity extends AppCompatActivity {
             if (nbId > 0) screenH -= getResources().getDimensionPixelSize(nbId);
             screenH -= dp(53); // 底部 TabBar
 
-            final androidx.core.widget.NestedScrollView scroll =
-                    new androidx.core.widget.NestedScrollView(this);
-            scroll.setLayoutParams(new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            // 不再包内层滚动容器：详情内容直接挂 moviesContainer，由面板经典 ScrollView 统一滚动。
+            // 嵌套 ScrollView 在 UNSPECIFIED 测量下会胀成内容高（滚动量程 0），还多一层无意义的焦点容器；
+            // 与概览共用同一条滚动/焦点路径，行为一致。
             LinearLayout content = new LinearLayout(this);
             content.setOrientation(LinearLayout.VERTICAL);
             content.setPadding(0, 0, 0, dp(20));
@@ -1377,6 +1636,21 @@ public class HomeActivity extends AppCompatActivity {
                 View chipGap = new View(this);
                 chipGap.setLayoutParams(new LinearLayout.LayoutParams(dp(10), 1));
                 heroMeta.addView(chipGap);
+            }
+            if (info.item != null && info.item.contentRatings != null
+                    && !info.item.contentRatings.trim().isEmpty()) {
+                // 分级同属决策信息，与评分 chip 同级呈现
+                String cr = info.item.contentRatings.trim();
+                TextView crChip = new TextView(this);
+                crChip.setText(cr.matches("[A-Za-z][A-Za-z0-9 +-]{0,5}") ? cr + " 级" : cr);
+                crChip.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_caption));
+                crChip.setTextColor(c(R.color.text_secondary));
+                crChip.setBackgroundResource(R.drawable.bg_chip);
+                crChip.setPadding(dp(10), dp(3), dp(10), dp(3));
+                heroMeta.addView(crChip);
+                View crGap = new View(this);
+                crGap.setLayoutParams(new LinearLayout.LayoutParams(dp(10), 1));
+                heroMeta.addView(crGap);
             }
             String date = info.item != null && info.item.releaseDate != null
                     ? info.item.releaseDate : (info.item != null ? info.item.airDate : null);
@@ -1479,8 +1753,7 @@ public class HomeActivity extends AppCompatActivity {
 
             content.addView(hero);
             buildDetailContent(content, item, info, epTitle, series, epNum, pUrl, true);
-            scroll.addView(content);
-            moviesContainer.addView(scroll);
+            moviesContainer.addView(content);
 
             // 焦点直达主行动（进详情页第一落点 = Play）
             playBtn.post(() -> {
@@ -1488,9 +1761,6 @@ public class HomeActivity extends AppCompatActivity {
             });
         } else {
             // ====== 竖屏：原布局 ======
-            androidx.core.widget.NestedScrollView scrollView = new androidx.core.widget.NestedScrollView(this);
-            scrollView.setLayoutParams(new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
             LinearLayout content = new LinearLayout(this);
             content.setOrientation(LinearLayout.VERTICAL);
             content.setPadding(14, 0, 14, 20);
@@ -1514,8 +1784,7 @@ public class HomeActivity extends AppCompatActivity {
             buildDetailContent(content, item, info, epTitle, series, epNum,
                     makePosterUrl(posterPath, 1200), false);
 
-            scrollView.addView(content);
-            moviesContainer.addView(scrollView);
+            moviesContainer.addView(content);
         }
     }
 
@@ -1558,6 +1827,16 @@ public class HomeActivity extends AppCompatActivity {
                     chipRow.addView(makeInfoChip(info.item.parentTitle));
                 if (info.item.episodeNumber > 0)
                     chipRow.addView(makeInfoChip("第 " + info.item.episodeNumber + " 集"));
+            }
+            if (info.item != null && info.item.productionCountries != null && !info.item.productionCountries.isEmpty()) {
+                StringBuilder cs = new StringBuilder();
+                for (String code : info.item.productionCountries) {
+                    String zh = COUNTRY_ZH.get(code == null ? "" : code.trim().toLowerCase(java.util.Locale.US));
+                    if (zh == null) zh = code;
+                    if (cs.length() > 0) cs.append("/");
+                    cs.append(zh);
+                }
+                if (cs.length() > 0) chipRow.addView(makeInfoChip(cs.toString()));
             }
             if (info.item != null && info.item.mediaStream != null) {
                 // 每类只取首个徽章（与旧日志串取数一致），保证 chip 行单行不溢出
@@ -1674,7 +1953,7 @@ public class HomeActivity extends AppCompatActivity {
                 overviewCard.addView(expand);
                 // 只有真被裁断时才显示“展开”——没裁断却给个展开键是骗人的
                 ov.post(() -> {
-                    if (!expanded[0]) expand.setVisibility(ov.getLineCount() > 4 ? View.VISIBLE : View.GONE);
+                    if (!expanded[0]) expand.setVisibility(isEllipsized(ov) ? View.VISIBLE : View.GONE);
                 });
             } else {
                 ovScroll.addView(ov);
@@ -1683,6 +1962,10 @@ public class HomeActivity extends AppCompatActivity {
             content.addView(overviewCard);
             content.addView(makeSpacer(12));
         }
+
+        // 媒体信息：只对携带具体 media_guid 的单项（电影/视频/单集）成立；TV 聚合项 media_guid 为空自然跳过
+        if (info.mediaGuid != null && !info.mediaGuid.isEmpty())
+            loadMediaSpecCard(content, info.mediaGuid);
 
         // 播放时间优先用 play/info 接口返回的 ts
         final String pGuid = item.guid;
@@ -2975,11 +3258,9 @@ public class HomeActivity extends AppCompatActivity {
         }
     }
 
-
     // ==================== 按键 ====================
 
     @Override
-
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_ESCAPE) {
             // 搜索模式 → 清除搜索回库根。不能裸 clearFocus()：焦点会落到首个可聚焦控件（影视 Tab），
