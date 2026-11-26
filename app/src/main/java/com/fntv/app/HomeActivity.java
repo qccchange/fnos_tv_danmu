@@ -35,6 +35,7 @@ public class HomeActivity extends AppCompatActivity {
     private Button tabMovies, tabLibrary, tabSettings;
     private View panelMovies, panelLibrary, panelSettings;
     private LinearLayout moviesContainer, libraryContainer;
+    private View topFocusAnchor;   // 焦点链虚拟顶端锚（1px，容器内）：跨容器 override 会被 FocusFinder 丢弃，链只能终止于容器内目标
     private TextView tvMoviesLoading, tvLibraryLoading, tvLibraryEmpty;
     private EditText etSearch;
     private boolean isSearching = false;
@@ -71,8 +72,7 @@ public class HomeActivity extends AppCompatActivity {
     // Hero = 焦点镜像（tvOS TopShelf 契约）：上方大图恒等于最近聚焦的 shelf 卡片，自身不再是独立浏览模式
     private ImageView carouselBg;
     private TextView carouselTitle, carouselMeta;
-    private android.widget.Button carouselPlayBtn;
-    private PlayListItem carouselCurrent;
+
 
     // ==================== 导航栈 ====================
     // 每帧 = 一个页面 + 重建它所需的全部数据；navStack 的栈顶恒等于当前页面。
@@ -734,40 +734,16 @@ public class HomeActivity extends AppCompatActivity {
         carouselMeta.setPadding(0, dp(4), 0, 0);
         bottom.addView(carouselMeta);
 
-        Button play = new Button(this);
-        play.setText("播放");
-        play.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_body));
-        play.setTextColor(0xFF121418);
-        play.setBackgroundResource(R.drawable.bg_play_white);
-        play.setFocusable(true);
-        play.setFocusableInTouchMode(true);
-        play.setId(View.generateViewId());   // CW 行 ↑ 锚点目标，NO_ID 会让重写失效
-        play.setMinWidth(0); play.setMinHeight(0);
-        LinearLayout.LayoutParams playLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, dp(40));
-        playLp.setMargins(0, dp(10), 0, 0);
-        play.setLayoutParams(playLp);
-        bottom.addView(play);
-        carouselPlayBtn = play;   // 文案与点击目标恒随镜像条目更新
-        play.setOnClickListener(v -> {
-            PlayListItem it = carouselCurrent;
-            if (it == null) return;
-            launchPlayer(it.guid, it.title, it.tvTitle != null ? it.tvTitle : "",
-                    it.episodeNumber, it.poster, it.getCategoryLabel(),
-                    it.ts, it.duration, it.parentGuid);
-        });
 
         root.addView(bottom);
 
         // 默认镜像第一个精选条目；“继续观看”加载完成后会被其首条覆盖（继续观看是第一优先位）
         mirrorHero(items.get(0));
-        relinkVerticalFocus();   // hero 播放键已创建：CW 行 ↑ 锚点此刻才有意义
     }
 
     /** hero 焦点镜像：聚焦哪张 shelf 卡，上方大图/标题/播放目标就变成谁 */
     private void mirrorHero(PlayListItem item) {
         if (item == null || carouselBg == null || !carouselBg.isAttachedToWindow()) return;
-        carouselCurrent = item;
         carouselTitle.setText(formatContinueTitle(item));
         String vote = voteLabel(item);
         StringBuilder meta = new StringBuilder();
@@ -781,8 +757,6 @@ public class HomeActivity extends AppCompatActivity {
             carouselBg.setTag(url);
             SimpleImageLoader.load(url, carouselBg, apiManager.getClient());
         }
-        if (carouselPlayBtn != null)
-            carouselPlayBtn.setText(item.ts > 0 ? "继续播放" : "播放");
     }
 
     private void loadContinueWatching() {
@@ -2306,14 +2280,31 @@ public class HomeActivity extends AppCompatActivity {
         for (int r = 0; r < rowViews.size(); r++) {
             ensureCardIds(rowViews.get(r));   // 程序化创建的 View 默认 id=NO_ID，先补发才能作纵向锚点
         }
+        if (topFocusAnchor == null) {
+            topFocusAnchor = new View(this);
+            topFocusAnchor.setFocusable(true);
+            topFocusAnchor.setId(View.generateViewId());
+        }
+        if (topFocusAnchor.getParent() == null)
+            moviesContainer.addView(topFocusAnchor, 0, new LinearLayout.LayoutParams(
+                    dp(240), 1));   // 窄左锚：从锚 ↑ 的自然搜索按 x 对齐落到「影视」tab，而非居中的媒体库
+        int tabUpId = topFocusAnchor.getId();   // 顶端锚在容器内；↑ 到锚后再按一次 ↑ 自然落到 tab 影视
+        int prevHeaderId = tabUpId;
         for (int r = 0; r < rowViews.size(); r++) {
             View first = firstCards.get(r);
             View header = headerBtns.get(r);
-            int upId = header != null ? header.getId()
-                    : (carouselPlayBtn != null ? carouselPlayBtn.getId() : View.NO_ID);
+            int upId = header != null ? header.getId() : tabUpId;   // 首区(继续观看) ↑ = 顶端锚
             int downId = r + 1 < rowViews.size() ? firstCards.get(r + 1).getId() : View.NO_ID;
             setRowVerticalTargets(rowViews.get(r), upId, downId);
-            if (header != null) header.setNextFocusDownId(first.getId());   // 查看全部 ↓ = 本区首卡
+            if (header != null) {
+                header.setNextFocusDownId(first.getId());   // 查看全部 ↓ = 本区首卡
+                header.setNextFocusUpId(prevHeaderId);      // 查看全部 ↑ 逐区上溯，顶区到 tab 影视（防右列循环出不去）
+            }
+            prevHeaderId = header != null ? header.getId() : tabUpId;
+        }
+        if (!firstCards.isEmpty()) {
+            if (tabMovies != null) tabMovies.setNextFocusDownId(firstCards.get(0).getId());   // tab ↓ 直达首行首卡（tab 作源，容器内目标可达）
+            topFocusAnchor.setNextFocusDownId(firstCards.get(0).getId());
         }
     }
 
