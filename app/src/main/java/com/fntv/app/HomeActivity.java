@@ -249,9 +249,17 @@ public class HomeActivity extends AppCompatActivity {
     /** 只切面板可见性与 Tab 选中态（不改导航栈）：进入详情页等跨面板跳转用 */
     private void showPanel(int index) {
         currentTab = index;
-        panelMovies.setVisibility(index == 0 ? View.VISIBLE : View.GONE);
-        panelLibrary.setVisibility(index == 1 ? View.VISIBLE : View.GONE);
-        panelSettings.setVisibility(index == 2 ? View.VISIBLE : View.GONE);
+        View[] panels = {panelMovies, panelLibrary, panelSettings};
+        for (int i = 0; i < panels.length; i++) {
+            boolean show = i == index;
+            boolean wasShown = panels[i].getVisibility() == View.VISIBLE;
+            panels[i].setVisibility(show ? View.VISIBLE : View.GONE);
+            if (show && !wasShown) {   // 宪法·连续性：面板隐→显 200ms 淡入，帧切换/返回不再硬切
+                panels[i].setAlpha(0f);
+                panels[i].animate().alpha(1f).setDuration(200).start();
+            }
+
+        }
         tabMovies.setSelected(index == 0);
         tabLibrary.setSelected(index == 1);
         tabSettings.setSelected(index == 2);
@@ -508,10 +516,8 @@ public class HomeActivity extends AppCompatActivity {
         viewAll.setTag("viewAll:" + libGuid);   // 纵向焦点重连按 tag 识别本区标题按钮
         viewAll.setPadding(24, 0, 24, 0);
         viewAll.setOnClickListener(v -> navigateBrowse(libGuid, libTitle, false));
-        viewAll.setOnFocusChangeListener((v, hasFocus) -> {
-            viewAll.setTextColor(hasFocus ? 0xFF81C784 : c(R.color.text_secondary));
-            viewAll.setBackgroundColor(hasFocus ? c(R.color.bg_chip_focus) : c(R.color.transparent));
-        });
+        bindFocusTextAndBg(viewAll, c(R.color.colorPrimaryLight), c(R.color.text_secondary),
+                c(R.color.bg_chip_focus), c(R.color.transparent));
         headerRow.setOnClickListener(v -> navigateBrowse(libGuid, libTitle, false));
         headerRow.setFocusable(true);
         headerRow.setOnFocusChangeListener((v, hasFocus) -> {
@@ -555,7 +561,7 @@ public class HomeActivity extends AppCompatActivity {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         h.setPadding(6, 8, 6, 4);
         h.setText("继续观看");
-        h.setTextColor(0xFF81C784);
+        h.setTextColor(c(R.color.colorPrimaryLight));
         h.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_body));
         h.setTypeface(Typeface.DEFAULT_BOLD);
         cont.addView(h);
@@ -622,7 +628,7 @@ public class HomeActivity extends AppCompatActivity {
         poster.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(135)));
         poster.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        poster.setCornerRadius(10);
+        poster.setCornerRadius(dimenDp(R.dimen.tv_card_radius));
         poster.setBackgroundColor(c(R.color.bg_input));
         String imgUrl = makePosterUrl(item.poster);
         if (imgUrl != null) { poster.setTag(imgUrl); }
@@ -639,7 +645,7 @@ public class HomeActivity extends AppCompatActivity {
         if (pct > 0) {
             View f = new View(HomeActivity.this);
             f.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, pct));
-            f.setBackgroundColor(0xFF81C784);
+            f.setBackgroundColor(c(R.color.colorPrimaryLight));
             pBar.addView(f);
         }
         if (pct < 100) {
@@ -704,11 +710,7 @@ public class HomeActivity extends AppCompatActivity {
         View scrim = new View(this);
         scrim.setLayoutParams(new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-        android.graphics.drawable.GradientDrawable gd =
-                new android.graphics.drawable.GradientDrawable(
-                        android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
-                        new int[]{0x00000000, 0x77000000, c(R.color.bg_dark)});
-        scrim.setBackgroundDrawable(gd);
+        scrim.setBackgroundResource(R.drawable.scrim_bottom);   // 宪法唯一底部 scrim（原 77/88 两配方归一为 88）
         root.addView(scrim);
 
         LinearLayout bottom = new LinearLayout(this);
@@ -725,7 +727,7 @@ public class HomeActivity extends AppCompatActivity {
         carouselTitle.setTypeface(Typeface.DEFAULT_BOLD);
         carouselTitle.setMaxLines(1);
         carouselTitle.setEllipsize(TextUtils.TruncateAt.END);
-        carouselTitle.setShadowLayer(6, 0, 2, 0x99000000);
+        carouselTitle.setShadowLayer(6, 0, 2, c(R.color.text_shadow));
         bottom.addView(carouselTitle);
 
         carouselMeta = new TextView(this);
@@ -835,7 +837,7 @@ public class HomeActivity extends AppCompatActivity {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         iv.setScaleType(ImageView.ScaleType.CENTER_CROP);
         iv.setBackgroundColor(c(R.color.bg_input));
-        iv.setCornerRadius(10);
+        iv.setCornerRadius(dimenDp(R.dimen.tv_card_radius));
         String imgUrl = makePosterUrl(item.poster);
         if (imgUrl != null) { iv.setTag(imgUrl); }
         posterWrap.addView(iv);
@@ -850,7 +852,7 @@ public class HomeActivity extends AppCompatActivity {
                 badge.setText(vote);
             }
             badge.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_caption));
-            badge.setTextColor(0xFFFFFFFF);
+            badge.setTextColor(c(R.color.text_white));
             badge.setBackgroundResource(R.drawable.bg_rating_badge);
             badge.setPadding(dp(8), dp(2), dp(8), dp(2));
             badge.setTypeface(Typeface.DEFAULT_BOLD);
@@ -1072,10 +1074,6 @@ public class HomeActivity extends AppCompatActivity {
         sortColumnBtn.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_caption));
         sortColumnBtn.setFocusable(true);
         sortColumnBtn.setPadding(14, 0, 14, 0);
-        sortColumnBtn.setOnFocusChangeListener((v, hasFocus) -> {
-            v.setScaleX(hasFocus ? 1.0f : 1.0f);
-            v.setScaleY(hasFocus ? 1.0f : 1.0f);
-        });
         final Button colBtnRef = sortColumnBtn;
         sortColumnBtn.setOnClickListener(v ->
                 new android.app.AlertDialog.Builder(this)
@@ -1118,10 +1116,6 @@ public class HomeActivity extends AppCompatActivity {
         sortOrderBtn.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_caption));
         sortOrderBtn.setFocusable(true);
         sortOrderBtn.setPadding(14, 0, 14, 0);
-        sortOrderBtn.setOnFocusChangeListener((v, hasFocus) -> {
-            v.setScaleX(hasFocus ? 1.0f : 1.0f);
-            v.setScaleY(hasFocus ? 1.0f : 1.0f);
-        });
         final Button orderBtnRef = sortOrderBtn;
         sortOrderBtn.setOnClickListener(v ->
                 new android.app.AlertDialog.Builder(this)
@@ -1325,11 +1319,7 @@ public class HomeActivity extends AppCompatActivity {
             View scrim = new View(this);
             scrim.setLayoutParams(new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            android.graphics.drawable.GradientDrawable scrimGd =
-                    new android.graphics.drawable.GradientDrawable(
-                            android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
-                            new int[]{0x00000000, 0x88000000, c(R.color.bg_dark)});
-            scrim.setBackgroundDrawable(scrimGd);
+            scrim.setBackgroundResource(R.drawable.scrim_bottom);
             hero.addView(scrim);
 
             // 渐变遮罩 B：左侧横向（左深 → 右透明），左侧文字列与艺术图分离（Netflix 惯例）
@@ -1337,9 +1327,7 @@ public class HomeActivity extends AppCompatActivity {
             scrimL.setLayoutParams(new FrameLayout.LayoutParams(
                     (int) (getResources().getDisplayMetrics().widthPixels * 0.62f),
                     ViewGroup.LayoutParams.MATCH_PARENT, Gravity.START));
-            scrimL.setBackgroundDrawable(new android.graphics.drawable.GradientDrawable(
-                    android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
-                    new int[]{0xB3000000, 0x33000000, 0x00000000}));
+            scrimL.setBackgroundResource(R.drawable.scrim_left);
             hero.addView(scrimL);
 
             // 无左上返回钮：tvOS/Netflix 惯例，返回由遥控器 BACK 承担（导航栈逐层返回），
@@ -1369,7 +1357,7 @@ public class HomeActivity extends AppCompatActivity {
             heroTitle.setTypeface(Typeface.DEFAULT_BOLD);
             heroTitle.setMaxLines(2);
             heroTitle.setEllipsize(TextUtils.TruncateAt.END);
-            heroTitle.setShadowLayer(6, 0, 2, 0x99000000);
+            heroTitle.setShadowLayer(6, 0, 2, c(R.color.text_shadow));
             heroText.addView(heroTitle);
 
             // 元信息行：评分 · 年份 · 类型(中文) · 时长/总季集 —— 语义分组、单一来源、不再与下半屏重复
@@ -1382,7 +1370,7 @@ public class HomeActivity extends AppCompatActivity {
                 TextView rating = new TextView(this);
                 rating.setText("★ " + vote);
                 rating.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_caption));
-                rating.setTextColor(0xFFFFD479);
+                rating.setTextColor(c(R.color.accent_gold));
                 rating.setBackgroundResource(R.drawable.bg_chip);
                 rating.setPadding(dp(10), dp(3), dp(10), dp(3));
                 heroMeta.addView(rating);
@@ -1411,7 +1399,7 @@ public class HomeActivity extends AppCompatActivity {
             shortMeta.setText(hm.toString());
             shortMeta.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_caption));
             shortMeta.setTextColor(c(R.color.text_secondary));
-            shortMeta.setShadowLayer(4, 0, 1, 0x99000000);
+            shortMeta.setShadowLayer(4, 0, 1, c(R.color.text_shadow));
             heroMeta.addView(shortMeta);
             heroText.addView(heroMeta);
 
@@ -1423,7 +1411,7 @@ public class HomeActivity extends AppCompatActivity {
 
             Button playBtn = new Button(this);
             playBtn.setBackgroundResource(R.drawable.bg_play_white);
-            playBtn.setTextColor(0xFF121418);
+            playBtn.setTextColor(c(R.color.text_on_bright));
             playBtn.setFocusable(true);
             playBtn.setFocusableInTouchMode(true);   // 触摸模式下允许程序化焦点（遥控器/触摸混用场景）
             playBtn.setMinWidth(dp(196));
@@ -1479,13 +1467,13 @@ public class HomeActivity extends AppCompatActivity {
                 View track = new View(this);
                 track.setLayoutParams(new FrameLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT, dp(4), Gravity.BOTTOM | Gravity.START));
-                track.setBackgroundColor(0x55FFFFFF);
+                track.setBackgroundColor(c(R.color.progress_track));
                 hero.addView(track);
                 View bar = new View(this);
                 bar.setLayoutParams(new FrameLayout.LayoutParams(
                         (int) (getResources().getDisplayMetrics().widthPixels * (hPct / 100.0f)),
                         dp(4), Gravity.BOTTOM | Gravity.START));
-                bar.setBackgroundColor(0xFF2D6CDF);
+                bar.setBackgroundColor(c(R.color.progress_fill));
                 hero.addView(bar);
             }
 
@@ -1514,7 +1502,7 @@ public class HomeActivity extends AppCompatActivity {
             poster.setAdjustViewBounds(true);
             poster.setScaleType(ImageView.ScaleType.FIT_CENTER);
             poster.setBackgroundColor(c(R.color.bg_card));
-            poster.setCornerRadius(10);
+            poster.setCornerRadius(dimenDp(R.dimen.tv_card_radius));
             if (pUrl != null) { poster.setTag(pUrl); }
             content.addView(poster);
             if (pUrl != null) {
@@ -1655,8 +1643,7 @@ public class HomeActivity extends AppCompatActivity {
             ovScroll.setFocusable(true);
             ovScroll.setFocusableInTouchMode(true);
             ovScroll.setDescendantFocusability(ViewGroup.FOCUS_BEFORE_DESCENDANTS);
-            ovScroll.setOnFocusChangeListener((v, hasFocus) ->
-                    v.setBackgroundColor(hasFocus ? c(R.color.bg_chip_focus) : c(R.color.transparent)));
+            bindFocusColor(ovScroll, c(R.color.bg_chip_focus), c(R.color.transparent), false);
             TextView ov = new TextView(this);
             ov.setLayoutParams(new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -1747,7 +1734,7 @@ public class HomeActivity extends AppCompatActivity {
             fill.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, progressPct));
             android.graphics.drawable.GradientDrawable fillGd = new android.graphics.drawable.GradientDrawable();
             fillGd.setCornerRadii(new float[]{r, r, 0, 0, 0, 0, r, r});
-            fillGd.setColor(0xFF2D6CDF);
+            fillGd.setColor(c(R.color.progress_fill));
             fill.setBackgroundDrawable(fillGd);
             progressLayer.addView(fill);
 
@@ -1768,18 +1755,8 @@ public class HomeActivity extends AppCompatActivity {
         playBtn.setBackgroundDrawable(null);
         playBtn.setFocusable(true);
         playBtn.setGravity(Gravity.CENTER);
-        playBtn.setTextColor(heroMode ? 0xFF121418 : c(R.color.text_white));
-        playBtn.setOnFocusChangeListener((v, hasFocus) -> {
-            if (hasFocus) {
-                playBtn.setBackgroundColor(c(R.color.bg_chip_focus));
-                playBtn.setScaleX(1.0f);
-                playBtn.setScaleY(1.0f);
-            } else {
-                playBtn.setBackgroundColor(c(R.color.transparent));
-                playBtn.setScaleX(1.0f);
-                playBtn.setScaleY(1.0f);
-            }
-        });
+        playBtn.setTextColor(heroMode ? c(R.color.text_on_bright) : c(R.color.text_white));
+        bindFocusColor(playBtn, c(R.color.bg_chip_focus), c(R.color.transparent), false);
         if (pTs > 0) {
             playBtn.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_body));
             playBtn.setText("继续播放\n" + formatDuration(pTs) + " / " + formatDuration(pDur));
@@ -1815,7 +1792,7 @@ public class HomeActivity extends AppCompatActivity {
         h.setText("选择剧集");
         h.setTag("episodes_section");
         h.setTextColor(c(R.color.text_primary));
-        h.setTextSize(22);
+        h.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_title_large));
         h.setTypeface(Typeface.DEFAULT_BOLD);
         content.addView(h);
 
@@ -1876,7 +1853,7 @@ public class HomeActivity extends AppCompatActivity {
         h.setGravity(Gravity.CENTER);
         h.setText("第 " + seasonNumber + " 季");
         h.setTextColor(c(R.color.text_primary));
-        h.setTextSize(21);
+        h.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_title_large));
         h.setTypeface(Typeface.DEFAULT_BOLD);
         moviesContainer.addView(h);
         moviesContainer.addView(makeSpacer(8));
@@ -1908,7 +1885,7 @@ public class HomeActivity extends AppCompatActivity {
                 ViewGroup.LayoutParams.MATCH_PARENT, 78));
         h.setGravity(Gravity.CENTER);
         h.setText("第 " + sn + " 季");
-        h.setTextColor(c(R.color.text_primary)); h.setTextSize(21);
+        h.setTextColor(c(R.color.text_primary)); h.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_title_large));
         h.setTypeface(Typeface.DEFAULT_BOLD);
         moviesContainer.addView(h);
         moviesContainer.addView(makeSpacer(8));
@@ -1951,7 +1928,7 @@ public class HomeActivity extends AppCompatActivity {
         TextView epNum = new TextView(this);
         epNum.setLayoutParams(new LinearLayout.LayoutParams(130, ViewGroup.LayoutParams.WRAP_CONTENT));
         epNum.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_body));
-        epNum.setTextColor(isCurrent ? 0xFF81C784 : c(R.color.text_secondary));
+        epNum.setTextColor(isCurrent ? c(R.color.colorPrimaryLight) : c(R.color.text_secondary));
         epNum.setText("EP" + (ep.episodeNumber > 0 ? ep.episodeNumber : "?"));
         infoCol.addView(epNum);
 
@@ -1963,7 +1940,7 @@ public class HomeActivity extends AppCompatActivity {
         TextView epTitle = new TextView(this);
         epTitle.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         epTitle.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_body));
-        epTitle.setTextColor(isCurrent ? 0xFF81C784 : c(R.color.text_primary));
+        epTitle.setTextColor(isCurrent ? c(R.color.colorPrimaryLight) : c(R.color.text_primary));
         epTitle.setSingleLine(true);
         epTitle.setEllipsize(TextUtils.TruncateAt.END);
         StringBuilder titleText = new StringBuilder();
@@ -1982,7 +1959,7 @@ public class HomeActivity extends AppCompatActivity {
                     ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT));
             badge.setGravity(Gravity.CENTER);
             badge.setText("当前");
-            badge.setTextColor(0xFF81C784);
+            badge.setTextColor(c(R.color.colorPrimaryLight));
             badge.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_caption));
             badge.setPadding(8, 0, 0, 8);
             card.addView(badge);
@@ -1995,10 +1972,6 @@ public class HomeActivity extends AppCompatActivity {
             playEp.setTextColor(c(R.color.text_primary));
             playEp.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_caption));
             playEp.setFocusable(true);
-            playEp.setOnFocusChangeListener((v, hasFocus) -> {
-                playEp.setScaleX(hasFocus ? 1.0f : 1.0f);
-                playEp.setScaleY(hasFocus ? 1.0f : 1.0f);
-            });
             playEp.setPadding(14, 0, 14, 0);
             playEp.setOnClickListener(v -> launchPlayer(eg, et, eTV, eEp, epPo, epCa, epTs, epDu, epPG));
             card.addView(playEp);
@@ -2211,7 +2184,7 @@ public class HomeActivity extends AppCompatActivity {
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         arrow.setText("❯");
         arrow.setTextColor(c(R.color.text_hint));
-        arrow.setTextSize(20);
+        arrow.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, dimen(R.dimen.tv_text_title));
         arrow.setGravity(Gravity.CENTER);
         arrow.setPadding(8, 0, 0, 0);
         card.addView(arrow);
@@ -2372,6 +2345,52 @@ public class HomeActivity extends AppCompatActivity {
             }
         }
         return null;
+    }
+
+    /** 宪法·连续性：焦点高亮色彩变化恒缓动（120ms ARGB），永不瞬移 */
+    private void bindFocusColor(final View v, final int focusedColor, final int normalColor, final boolean textColor) {
+        final int[] cur = {normalColor};
+        v.setOnFocusChangeListener((view, has) -> {
+            int to = has ? focusedColor : normalColor;
+            if (cur[0] == to) return;
+            android.animation.ValueAnimator va = android.animation.ValueAnimator.ofInt(cur[0], to);
+            va.setEvaluator(new android.animation.ArgbEvaluator());
+            va.setDuration(120);
+            va.addUpdateListener(an -> {
+                cur[0] = (int) an.getAnimatedValue();
+                if (textColor && view instanceof TextView) ((TextView) view).setTextColor(cur[0]);
+                else view.setBackgroundColor(cur[0]);
+            });
+            va.start();
+        });
+    }
+
+    /** 文字色 + 底色同步缓动（查看全部按钮等双属性控件） */
+    private void bindFocusTextAndBg(final TextView tv, final int tFocused, final int tNormal,
+                                    final int bgFocused, final int bgNormal) {
+        final int[] cur = {tNormal, bgNormal};
+        tv.setOnFocusChangeListener((view, has) -> {
+            final int toT = has ? tFocused : tNormal;
+            final int toB = has ? bgFocused : bgNormal;
+            if (cur[0] == toT && cur[1] == toB) return;
+            final int fromT = cur[0], fromB = cur[1];
+            android.animation.ValueAnimator va = android.animation.ValueAnimator.ofFloat(0f, 1f);
+            va.setDuration(120);
+            final android.animation.ArgbEvaluator ae = new android.animation.ArgbEvaluator();
+            va.addUpdateListener(an -> {
+                float f = (Float) an.getAnimatedValue();
+                cur[0] = (int) ae.evaluate(f, fromT, toT);
+                cur[1] = (int) ae.evaluate(f, fromB, toB);
+                tv.setTextColor(cur[0]);
+                tv.setBackgroundColor(cur[1]);
+            });
+            va.start();
+        });
+    }
+
+    /** dimen 资源 → dp 数值（供按 dp 入参的 API 使用） */
+    private float dimenDp(int dimenId) {
+        return dimen(dimenId) / getResources().getDisplayMetrics().density;
     }
 
     private void focusScale(View v) {
@@ -2753,10 +2772,8 @@ public class HomeActivity extends AppCompatActivity {
         viewAll.setTag("viewAll:live");   // 纵向焦点重连按 tag 识别本区标题按钮
         viewAll.setPadding(24, 0, 24, 0);
         viewAll.setOnClickListener(v -> browseLiveChannels());
-        viewAll.setOnFocusChangeListener((v, hasFocus) -> {
-            viewAll.setTextColor(hasFocus ? 0xFF81C784 : c(R.color.text_secondary));
-            viewAll.setBackgroundColor(hasFocus ? c(R.color.bg_chip_focus) : c(R.color.transparent));
-        });
+        bindFocusTextAndBg(viewAll, c(R.color.colorPrimaryLight), c(R.color.text_secondary),
+                c(R.color.bg_chip_focus), c(R.color.transparent));
         headerRow.addView(viewAll);
         section.addView(headerRow);
 
@@ -2798,14 +2815,15 @@ public class HomeActivity extends AppCompatActivity {
 
         // 频道全名 + 彩色背景
         String shortName = item.title != null && !item.title.isEmpty() ? item.title : "?";
-        int[] colors = {0xFFE53935, 0xFF1E88E5, 0xFF43A047, 0xFFFB8C00,
-                        0xFF8E24AA, 0xFF00ACC1, 0xFF6D4C41, 0xFF546E7A};
-        int colorIdx = item.guid != null ? Math.abs(item.guid.hashCode() % colors.length) : 0;
-        float r = 28 * getResources().getDisplayMetrics().density;
+        android.content.res.TypedArray catColors = getResources().obtainTypedArray(R.array.category_colors);   // 类别色板 res 单一来源
+        int colorIdx = item.guid != null ? Math.abs(item.guid.hashCode() % catColors.length()) : 0;
+        int badgeColor = catColors.getColor(colorIdx, c(R.color.colorPrimaryLight));
+        catColors.recycle();
+        float r = dimen(R.dimen.tv_pill_radius);
         android.graphics.drawable.GradientDrawable badgeBg = new android.graphics.drawable.GradientDrawable();
         badgeBg.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
         badgeBg.setCornerRadius(r);
-        badgeBg.setColor(colors[colorIdx]);
+        badgeBg.setColor(badgeColor);
         TextView channelBadge = new TextView(this);
         channelBadge.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, 280));

@@ -33,4 +33,25 @@
     <color name="error">#FFC62828</color>
     <color name="bg_scrim">#AA000000</color>
     <color name="transparent">#00000000</color>
+    <!-- v1.9 视觉宪法新增 token -->
+    <color name="bg_placeholder">#FF333333</color>
+    <color name="bg_placeholder_dark">#FF222222</color>
+    <color name="text_on_bright">#FF121418</color>
+    <color name="accent_gold">#FFFFD479</color>
+    <color name="progress_track">#55FFFFFF</color>
+    <color name="progress_fill">#FF2D6CDF</color>
+    <color name="text_shadow">#99000000</color>
+    <color name="panel_scrim">#DD1A1A1A</color>
+    <color name="danger_soft">#FFE57373</color>
+    <color name="neutral_gray">#FF808080</color>
+    <array name="category_colors">
+        <item>#FFE53935</item>
+        <item>#FF1E88E5</item>
+        <item>#FF43A047</item>
+        <item>#FFFB8C00</item>
+        <item>#FF8E24AA</item>
+        <item>#FF00ACC1</item>
+        <item>#FF6D4C41</item>
+        <item>#FF546E7A</item>
+    </array>
 </resources>

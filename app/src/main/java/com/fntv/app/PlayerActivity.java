@@ -1062,7 +1062,7 @@ public class PlayerActivity extends AppCompatActivity {
 
         final android.app.Dialog dialog = new android.app.Dialog(this, android.R.style.Theme_DeviceDefault_Dialog_NoActionBar);
         dialog.setContentView(R.layout.dialog_skip);
-        dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(0xDD1A1A1A));
+        dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(c(R.color.panel_scrim)));
 
         // 标题
         TextView tvTitle = dialog.findViewById(R.id.tv_skip_title);
@@ -1139,7 +1139,7 @@ public class PlayerActivity extends AppCompatActivity {
         if (brightness > 100) brightness = 100;
         final android.app.Dialog dialog = new android.app.Dialog(this, android.R.style.Theme_DeviceDefault_Dialog_NoActionBar);
         dialog.setContentView(R.layout.dialog_brightness);
-        dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(0xDD1A1A1A));
+        dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(c(R.color.panel_scrim)));
 
         final TextView label = dialog.findViewById(R.id.dm_label);
         final SeekBar sb = dialog.findViewById(R.id.dm_seekbar);
@@ -1187,10 +1187,10 @@ public class PlayerActivity extends AppCompatActivity {
         boolean videoHdr = isHdrVideo();
         if (videoHdr) {
             btnHdrToggle.setText(enabled ? "HDR:开" : "HDR:关");
-            btnHdrToggle.setTextColor(enabled ? 0xFF81C784 : 0xFFE57373);
+            btnHdrToggle.setTextColor(enabled ? c(R.color.colorPrimaryLight) : c(R.color.danger_soft));
         } else {
             btnHdrToggle.setText("HDR");
-            btnHdrToggle.setTextColor(0xFF808080);
+            btnHdrToggle.setTextColor(c(R.color.neutral_gray));
         }
     }
 

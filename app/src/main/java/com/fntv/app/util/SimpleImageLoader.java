@@ -1,5 +1,6 @@
 package com.fntv.app.util;
 
+import com.fntv.app.R;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
@@ -30,13 +31,13 @@ public class SimpleImageLoader {
     public static void load(String url, ImageView view, OkHttpClient client) {
         if (url == null || url.isEmpty()) {
             view.setImageBitmap(null);
-            view.setBackgroundColor(0xFF333333);
+            view.setBackgroundColor(c(view.getContext(), R.color.bg_placeholder));
             return;
         }
 
         Bitmap cached = cache.get(url);
         if (cached != null) {
-            view.setImageBitmap(cached);
+            showImage(view, cached);
             return;
         }
 
@@ -52,18 +53,35 @@ public class SimpleImageLoader {
     public static void loadBlur(String url, ImageView view, OkHttpClient client) {
         if (url == null || url.isEmpty()) {
             view.setImageBitmap(null);
-            view.setBackgroundColor(0xFF222222);
+            view.setBackgroundColor(c(view.getContext(), R.color.bg_placeholder_dark));
             return;
         }
         final String key = url + "#blur";
         Bitmap cached = cache.get(key);
         if (cached != null) {
             view.setScaleType(ImageView.ScaleType.FIT_XY);
-            view.setImageBitmap(cached);
+            showImage(view, cached);
             return;
         }
         view.setScaleType(ImageView.ScaleType.FIT_XY);
         new BlurLoadTask(view, client).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, url);
+    }
+
+    @SuppressWarnings("deprecation")
+    private static int c(android.content.Context ctx, int colorId) {
+        return ctx.getResources().getColor(colorId);
+    }
+
+    /** 宪法·连续性：图片永不啪地弹出——180ms alpha 淡入（hero 镜像换图时即 crossfade 感） */
+    private static void showImage(ImageView view, Bitmap bmp) {
+        if (!view.isAttachedToWindow()) {   // getWindow() 要 API23，attach 判定 19 可用   // 未挂窗：动画不会跑，直接显示
+            view.setAlpha(1f);
+            view.setImageBitmap(bmp);
+            return;
+        }
+        view.setAlpha(0f);
+        view.setImageBitmap(bmp);
+        view.animate().alpha(1f).setDuration(180).start();
     }
 
     private static class BlurLoadTask extends AsyncTask<String, Void, Bitmap> {
@@ -109,9 +127,9 @@ public class SimpleImageLoader {
         protected void onPostExecute(Bitmap bmp) {
             if (bmp != null) {
                 imageView.setScaleType(ImageView.ScaleType.FIT_XY);
-                imageView.setImageBitmap(bmp);
+                showImage(imageView, bmp);
             } else {
-                imageView.setBackgroundColor(0xFF222222);
+                imageView.setBackgroundColor(c(imageView.getContext(), R.color.bg_placeholder_dark));
             }
         }
     }
@@ -177,9 +195,9 @@ public class SimpleImageLoader {
         @Override
         protected void onPostExecute(Bitmap bitmap) {
             if (bitmap != null) {
-                imageView.setImageBitmap(bitmap);
+                showImage(imageView, bitmap);
             } else {
-                imageView.setBackgroundColor(0xFF444444);
+                imageView.setBackgroundColor(c(imageView.getContext(), R.color.bg_placeholder));
             }
         }
     }

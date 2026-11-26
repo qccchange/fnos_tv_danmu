@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 左侧压暗渐变（详情 hero 文字衬底）：B3→33→透明 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:type="linear"
+        android:angle="0"
+        android:startColor="#B3000000"
+        android:centerColor="#33000000"
+        android:endColor="#00000000" />
+</shape>

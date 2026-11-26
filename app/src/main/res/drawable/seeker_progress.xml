@@ -3,14 +3,14 @@
     <item android:id="@android:id/background">
         <shape>
             <solid android:color="#33FFFFFF" />
-            <corners android:radius="3dp" />
+            <corners android:radius="@dimen/tv_chip_radius" />
         </shape>
     </item>
     <item android:id="@android:id/secondaryProgress">
         <clip>
             <shape>
                 <solid android:color="#66FFFFFF" />
-                <corners android:radius="3dp" />
+                <corners android:radius="@dimen/tv_chip_radius" />
             </shape>
         </clip>
     </item>
@@ -18,7 +18,7 @@
         <clip>
             <shape>
                 <solid android:color="#3370FF" />
-                <corners android:radius="3dp" />
+                <corners android:radius="@dimen/tv_chip_radius" />
             </shape>
         </clip>
     </item>

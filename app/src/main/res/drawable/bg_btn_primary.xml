@@ -3,27 +3,27 @@
     <item android:state_pressed="true" android:state_focused="true">
         <shape android:shape="rectangle">
             <solid android:color="#FF2856C4" />
-            <corners android:radius="10dp" />
+            <corners android:radius="@dimen/tv_card_radius" />
             <stroke android:width="2dp" android:color="#FF3370FF" />
         </shape>
     </item>
     <item android:state_focused="true">
         <shape android:shape="rectangle">
             <solid android:color="#FF3370FF" />
-            <corners android:radius="10dp" />
+            <corners android:radius="@dimen/tv_card_radius" />
             <stroke android:width="2dp" android:color="#FF5599FF" />
         </shape>
     </item>
     <item android:state_pressed="true">
         <shape android:shape="rectangle">
             <solid android:color="#FF2856C4" />
-            <corners android:radius="10dp" />
+            <corners android:radius="@dimen/tv_card_radius" />
         </shape>
     </item>
     <item>
         <shape android:shape="rectangle">
             <solid android:color="#FF3370FF" />
-            <corners android:radius="10dp" />
+            <corners android:radius="@dimen/tv_card_radius" />
         </shape>
     </item>
 </selector>

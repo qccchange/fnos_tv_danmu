@@ -33,4 +33,7 @@
     <dimen name="tv_gap_sm">8dp</dimen>
     <dimen name="tv_gap_md">16dp</dimen>
     <dimen name="tv_gap_lg">24dp</dimen>
+    <!-- 圆角三级刻度（chip / card / pill&panel） -->
+    <dimen name="tv_chip_radius">4dp</dimen>
+    <dimen name="tv_pill_radius">28dp</dimen>
 </resources>
